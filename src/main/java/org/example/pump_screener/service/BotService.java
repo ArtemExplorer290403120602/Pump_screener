@@ -7,6 +7,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.List;
+
 @Service
 public class BotService extends TelegramLongPollingBot {
     private final BotConfig config;
@@ -44,6 +46,15 @@ public class BotService extends TelegramLongPollingBot {
                     String result = binanceService.getAccountStatus(); // Используем новый метод
                     try {
                         sendMessage(chatId, result);
+                    } catch (TelegramApiException e) {
+                        throw new RuntimeException(e);
+                    }
+                    break;
+                case "/list_bitcoin_pairs":
+                    List<String> bitcoinPairs = binanceService.getAllBitcoinPairs();
+                    String result1 = "Доступные биткойн-пары:\n" + String.join("\n", bitcoinPairs);
+                    try {
+                        sendMessage(chatId, result1);
                     } catch (TelegramApiException e) {
                         throw new RuntimeException(e);
                     }
