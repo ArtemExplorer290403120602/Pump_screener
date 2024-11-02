@@ -66,11 +66,34 @@ public class BinanceService implements BinanceAPI {
         return bitcoinPairs;
     }
 
+    @Override
+    public List<String> getAllUsdtPairs() {
+        List<String> usdtPairs = new ArrayList<>();
+        try {
+            HashMap<String, Object> parameters = new HashMap<>();
+            String response = spotClient.createMarket().exchangeInfo(parameters);
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(response);
+            JsonNode symbolsNode = rootNode.path("symbols");
+
+            for (JsonNode symbolInfo : symbolsNode) {
+                String symbol = symbolInfo.path("symbol").asText();
+                if (symbol.endsWith("USDT")) {
+                    usdtPairs.add(symbol);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return usdtPairs;
+    }
+
 
 
 
 
         /*
+        Все методы которые есть
         spotClient.createBlvt();
         spotClient.createTrade();
         spotClient.createBswap();
