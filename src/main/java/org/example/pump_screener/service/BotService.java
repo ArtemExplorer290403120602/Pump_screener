@@ -3,20 +3,47 @@ package org.example.pump_screener.service;
 import org.example.pump_screener.config.BotConfig;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class BotService extends TelegramLongPollingBot {
     private final BotConfig config;
     private final BinanceService binanceService;
+    List<BotCommand> listOfBotCommands = new ArrayList<>();
 
     public BotService(BotConfig config, BinanceService binanceService) {
         this.config = config;
         this.binanceService = binanceService;
+        this.listOfBotCommands = new ArrayList<>();
+        initCommands();
+        try {
+            // Создаем объект SetMyCommands и передаем список команд
+            SetMyCommands setMyCommands = new SetMyCommands();
+            setMyCommands.setCommands(listOfBotCommands);
+            setMyCommands.setScope(new BotCommandScopeDefault());
+            setMyCommands.setLanguageCode("en");
+
+            // Это вызов метода для установки команд
+            this.execute(setMyCommands);
+        } catch (TelegramApiException e) {
+            // Логирование ошибки или обработка в соответствии с вашими требованиями
+            e.printStackTrace();
+        }
+    }
+
+
+    private void initCommands() {
+        listOfBotCommands.add(new BotCommand("/start", "Приветствует пользователя и объясняет, что делает бот."));
+        listOfBotCommands.add(new BotCommand("/check_binance", "Проверяет статус вашего аккаунта на Binance."));
+        listOfBotCommands.add(new BotCommand("/list_bitcoin_pairs", "Выводит список доступных биткойн-пар."));
     }
 
     @Override
@@ -43,7 +70,7 @@ public class BotService extends TelegramLongPollingBot {
                     }
                     break;
                 case "/check_binance":
-                    String result = binanceService.getAccountStatus(); // Используем новый метод
+                    String result = binanceService.getAccountStatus();
                     try {
                         sendMessage(chatId, result);
                     } catch (TelegramApiException e) {
