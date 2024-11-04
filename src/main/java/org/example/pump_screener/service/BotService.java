@@ -93,6 +93,10 @@ public class BotService extends TelegramLongPollingBot {
                     priceVolumeWatcher.setMonitoringStarted(true);
                     sendMessageSafely(chatId, "Мониторинг всех биткойн пар с форматом USDT запущен.");
                     break;
+                case "/start_monitoring_two_procent":
+                    priceVolumeWatcher.setMonitoringTwoPercentActive(true);
+                    sendMessageSafely(chatId, "У Егора маленький член и большие яйца ");
+                    break;
                 default:
                     sendMessageSafely(chatId, "Пока ничего не придумал");
             }
