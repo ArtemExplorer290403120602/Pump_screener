@@ -15,6 +15,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -156,8 +157,9 @@ public class BotService extends TelegramLongPollingBot {
 
     @EventListener
     public void handlePriceAlert(PriceAlertEvent event) {
-        String message = String.format("%s (изменение)\nОбъем: %.2f $\nИзменение цены: %.2f%%",
-                event.getSymbol(), event.getVolume(), event.getPriceChange());
+        String pumpOrDump = event.getPriceChange().compareTo(BigDecimal.ZERO) > 0 ? "Pump" : "Dump";
+        String message = String.format("%s (%s)\nИзменение цены: %.2f%%",
+                event.getSymbol(), pumpOrDump, event.getPriceChange());
         System.out.println("Отправка сообщения: " + message);
         sendMessageToAllUsers(message);
     }

@@ -1,6 +1,7 @@
 package org.example.pump_screener.adapters;
 
 
+import com.binance.connector.client.exceptions.BinanceClientException;
 import lombok.Setter;
 import org.example.pump_screener.service.BinanceService;
 import org.example.pump_screener.service.BotService;
@@ -111,27 +112,35 @@ public class PriceVolumeWatcher {
             System.out.println("Мониторинг 1.25% активен");
 
             // Объявляем список символов, которые необходимо отслеживать
-            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT", "ETHUSDT", "PEOPLEUSDT", "PENDLEUSDT"};
+            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT", "ETHUSDT", "PEOPLEUSDT", "PENDLEUSDT","AVAXUSDT","AAVEUSDT","WIFUSDT","XRPUSDT","TURBOUSDT","LINKUSDT","SAGAUSDT","DOGSUSDT","OPUSDT","PIXELUSDT","JASMYUSDT","ZKUSDT","ARBUSDT","CATIUSDT","FILUSDT","DOTUSDT"};
 
             for (String symbol : symbolsToTrack) {
-                List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                if (!latestCandlesticks.isEmpty()) {
-                    BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
+                try {
+                    List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+                    if (!latestCandlesticks.isEmpty()) {
+                        BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
 
-                    // Логика для проверки роста на 1.25%
-                    BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
-                    BigDecimal closePrice = new BigDecimal(candlestick.getClose());
-                    BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+                        // Логика для проверки роста на 1.25%
+                        BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
+                        BigDecimal closePrice = new BigDecimal(candlestick.getClose());
+                        BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-                    // Если изменение более 1.25%, отправляем уведомление
-                    if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.75)) >= 0) {
-                        String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
-                        String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
-                        System.out.println("Отправка сообщения: " + message);
-                        eventPublisher.publishEvent(new PriceAlertEventImpl(symbol, priceChangePercent, BigDecimal.ZERO));
+                        // Если изменение более 1.25%, отправляем уведомление
+                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.10)) >= 0) {
+                            String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
+                            String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
+                            System.out.println("Отправка сообщения: " + message);
+                            eventPublisher.publishEvent(new PriceAlertEventImpl(symbol, priceChangePercent, BigDecimal.ZERO));
+                        }
+                    } else {
+                        System.out.println("Нет данных для символа: " + symbol);
                     }
-                } else {
-                    System.out.println("Нет данных для символа: " + symbol);
+                } catch (BinanceClientException e) {
+                    // Обработка ошибки из API при недействительном символе
+                    System.err.println("Ошибка для символа " + symbol + ": " + e.getMessage());
+                } catch (Exception e) {
+                    // Общая обработка ошибок
+                    System.err.println("Ошибка обработки символа " + symbol + ": " + e.getMessage());
                 }
             }
         }
