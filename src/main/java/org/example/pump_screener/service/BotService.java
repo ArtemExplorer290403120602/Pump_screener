@@ -32,12 +32,8 @@ public class BotService extends TelegramLongPollingBot {
         this.priceVolumeWatcher = priceVolumeWatcher;
 
         List<BotCommand> listOfBotCommands = new ArrayList<>();
-        listOfBotCommands.add(new BotCommand("/start", "Приветствует пользователя и объясняет, что делает бот."));
-        listOfBotCommands.add(new BotCommand("/check_binance", "Проверяет статус вашего аккаунта на Binance."));
-        listOfBotCommands.add(new BotCommand("/list_bitcoin_pairs", "Выводит список доступных биткойн-пар."));
-        listOfBotCommands.add(new BotCommand("/list_usdt_pairs", "Выводит список доступных пар с USDT."));
-        listOfBotCommands.add(new BotCommand("/start_monitoring", "Запускает мониторинг цен и объема."));
-        listOfBotCommands.add(new BotCommand("/stop_monitoring", "Останавливает мониторинг цен и объема."));
+        listOfBotCommands.add(new BotCommand("/start", "Перезапуск бота и добавление пользователя в бота"));
+        listOfBotCommands.add(new BotCommand("/start_monitoring_two_procent", "Запускает мониторинг цен с условием роста на 2%."));
         try {
             execute(new SetMyCommands(listOfBotCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -96,7 +92,7 @@ public class BotService extends TelegramLongPollingBot {
                     break;
                 case "/start_monitoring_two_procent":
                     priceVolumeWatcher.setMonitoringTwoPercentActive(true);
-                    sendMessageSafely(chatId, "У Егора маленький член и большие яйца ");
+                    sendMessageSafely(chatId, "Мониторинг цен с условием роста на 2% запущен.");
                     break;
                 default:
                     sendMessageSafely(chatId, "Пока ничего не придумал");
@@ -153,7 +149,7 @@ public class BotService extends TelegramLongPollingBot {
             chatIds.add(chatId);
             System.out.println("Добавлен новый пользователь с chatId: " + chatId);
         }
-        String answer = "Привет " + name + ", это бот поможет тебе заработать огромные бабки!";
+        String answer = "Привет " + name + ", это бот поможет тебе отслеживать изменение цены свечи на графике ( время 1 минута) !";
         sendMessage(chatId, answer);
     }
 

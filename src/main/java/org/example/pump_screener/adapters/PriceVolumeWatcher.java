@@ -109,10 +109,20 @@ public class PriceVolumeWatcher {
     @Scheduled(fixedRate = 60000) // периодичность сообщений
     public void monitorTwoPercentGrowth() {
         if (monitoringTwoPercentActive) {
-            System.out.println("Мониторинг 1.25% активен");
+            System.out.println("Мониторинг 2% активен");
 
             // Объявляем список символов, которые необходимо отслеживать
-            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT", "ETHUSDT", "PEOPLEUSDT", "PENDLEUSDT","AVAXUSDT","AAVEUSDT","WIFUSDT","XRPUSDT","TURBOUSDT","LINKUSDT","SAGAUSDT","DOGSUSDT","OPUSDT","PIXELUSDT","JASMYUSDT","ZKUSDT","ARBUSDT","CATIUSDT","FILUSDT","DOTUSDT"};
+            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
+                    "ETHUSDT", "BNBUSDT", "PENDLEUSDT","AVAXUSDT","AAVEUSDT","WIFUSDT","XRPUSDT","TURBOUSDT",
+                    "LINKUSDT","SAGAUSDT","DOGSUSDT","OPUSDT","PIXELUSDT","JASMYUSDT","ZKUSDT","ARBUSDT",
+                    "CATIUSDT","FILUSDT","DOTUSDT","BCHUSDT","EOSUSDT","LTCUSDT","TRXUSDT","ETCUSDT","XLMUSDT","XMRUSDT",
+                    "DASHUSDT","ZECUSDT","XTZUSDT","ATOMUSDT","ONTUSDT","IOTAUSDT","BATUSDT","VETUSDT","NEOUSDT","QTUMUSDT",
+                    "IOSTUSDT","THETAUSDT","ALGOUSDT","ZILUSDT","KNCUSDT","ZRXUSDT","COMPUSDT","OMGUSDT","SXPUSDT","KAVAUSDT",
+                    "BANDUSDT","RLCUSDT","MKRUSDT","SNXUSDT","CELRUSDT","YFIUSDT","BALUSDT","CRVUSDT","TRBUSDT","RUNEUSDT",
+                    "SUSHIUSDT","EGLDUSDT","SOLUSDT","ICXUSDT","STORJUSDT","BLZUSDT","UNIUSDT","FTMUSDT","ENJUSDT","FLMUSDT",
+                    "RENUSDT","KSMUSDT","NEARUSDT","RSRUSDT","LRCUSDT","BELUSDT","AXSUSDT","ALPHAUSDT","ZENUSDT","SKLUSDT",
+                    "1INCHUSDT","CHZUSDT","SANDUSDT","ANKRUSDT","LITUSDT","REEFUSDT","RVNUSDT","SFPUSDT","XEMUSDT","COTIUSDT",
+                    "CHRUSDT","MANAUSDT","ALICEUSDT","HBARUSDT","ONEUSDT","LINAUSDT","STMXUSDT","DENTUSDT"};
 
             for (String symbol : symbolsToTrack) {
                 try {
@@ -120,13 +130,13 @@ public class PriceVolumeWatcher {
                     if (!latestCandlesticks.isEmpty()) {
                         BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
 
-                        // Логика для проверки роста на 1.25%
+                        // Логика для проверки роста на 2%
                         BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
                         BigDecimal closePrice = new BigDecimal(candlestick.getClose());
                         BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-                        // Если изменение более 1.25%, отправляем уведомление
-                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.05)) >= 0) {
+                        // Если изменение более 2%, отправляем уведомление
+                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(2)) >= 0) {
                             String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
                             String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
                             System.out.println("Отправка сообщения: " + message);
