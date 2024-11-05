@@ -108,23 +108,23 @@ public class PriceVolumeWatcher {
     @Scheduled(fixedRate = 60000) // периодичность сообщений
     public void monitorTwoPercentGrowth() {
         if (monitoringTwoPercentActive) {
-            System.out.println("Мониторинг 0.05% активен");
+            System.out.println("Мониторинг 1.25% активен");
 
             // Объявляем список символов, которые необходимо отслеживать
-            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT"};
+            String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT", "ETHUSDT", "PEOPLEUSDT", "PENDLEUSDT"};
 
             for (String symbol : symbolsToTrack) {
                 List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
                 if (!latestCandlesticks.isEmpty()) {
                     BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
 
-                    // Логика для проверки роста на 0.05%
+                    // Логика для проверки роста на 1.25%
                     BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
                     BigDecimal closePrice = new BigDecimal(candlestick.getClose());
                     BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-                    // Если изменение более 0.05%, отправляем уведомление
-                    if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.05)) >= 0) {
+                    // Если изменение более 1.25%, отправляем уведомление
+                    if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.75)) >= 0) {
                         String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
                         String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
                         System.out.println("Отправка сообщения: " + message);
@@ -136,4 +136,5 @@ public class PriceVolumeWatcher {
             }
         }
     }
+
 }
