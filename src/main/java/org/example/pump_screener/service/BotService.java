@@ -166,9 +166,9 @@ public class BotService extends TelegramLongPollingBot {
         String fireEmoji = "🔥"; // Emoji огня, который будет под сообщением
         String alertEmoji = "❗️❗️❗️❗️❗️"; // Три восклицательных знака (emoji) для предупреждения
 
-        // Формируем сообщение с emoji
-        String message = String.format("%s\n\n %s %s\n изменение цены: %.2f%% %s",
-        alertEmoji, directionEmoji, event.getSymbol() + " (" + pumpOrDump + ")",
+        // Формируем сообщение с emoji, добавляя символ в обратные апострофы
+        String message = String.format("%s\n\n %s ` %s ` (%s)\n изменение цены: %.2f%% %s",
+        alertEmoji, directionEmoji, event.getSymbol(), pumpOrDump,
                 event.getPriceChange(), fireEmoji);
 
         System.out.println("Отправка сообщения: " + message);
