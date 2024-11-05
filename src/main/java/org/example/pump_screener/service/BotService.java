@@ -127,21 +127,23 @@ public class BotService extends TelegramLongPollingBot {
 
     private void sendMessage(long chatId, String sendText) throws TelegramApiException {
         final int maxMessageLength = 4096;
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+
+        // Устанавливаем режим Markdown для форматирования
+        message.setText(sendText);
+        message.setParseMode("Markdown"); // Указываем режим форматирования
+
         if (sendText.length() > maxMessageLength) {
             int start = 0;
             while (start < sendText.length()) {
                 int end = Math.min(sendText.length(), start + maxMessageLength);
                 String part = sendText.substring(start, end);
-                SendMessage message = new SendMessage();
-                message.setChatId(String.valueOf(chatId));
                 message.setText(part);
                 execute(message);
                 start = end;
             }
         } else {
-            SendMessage message = new SendMessage();
-            message.setChatId(String.valueOf(chatId));
-            message.setText(sendText);
             execute(message);
         }
     }
@@ -158,6 +160,7 @@ public class BotService extends TelegramLongPollingBot {
     @EventListener
     public void handlePriceAlert(PriceAlertEvent event) {
         String pumpOrDump = event.getPriceChange().compareTo(BigDecimal.ZERO) > 0 ? "Pump" : "Dump";
+        // Используем Markdown для выделения символа
         String message = String.format("%s (%s)\nИзменение цены: %.2f%%",
                 event.getSymbol(), pumpOrDump, event.getPriceChange());
         System.out.println("Отправка сообщения: " + message);
