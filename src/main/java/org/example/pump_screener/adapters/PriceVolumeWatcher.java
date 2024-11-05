@@ -126,7 +126,7 @@ public class PriceVolumeWatcher {
                         BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
                         // Если изменение более 1.25%, отправляем уведомление
-                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.10)) >= 0) {
+                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.05)) >= 0) {
                             String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
                             String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
                             System.out.println("Отправка сообщения: " + message);

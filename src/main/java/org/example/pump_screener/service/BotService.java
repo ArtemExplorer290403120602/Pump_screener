@@ -160,9 +160,16 @@ public class BotService extends TelegramLongPollingBot {
     @EventListener
     public void handlePriceAlert(PriceAlertEvent event) {
         String pumpOrDump = event.getPriceChange().compareTo(BigDecimal.ZERO) > 0 ? "Pump" : "Dump";
-        // Используем Markdown для выделения символа
-        String message = String.format("%s (%s)\nИзменение цены: %.2f%%",
-                event.getSymbol(), pumpOrDump, event.getPriceChange());
+
+        // Определяем emoji для Pump и Dump
+        String directionEmoji = pumpOrDump.equals("Pump") ? "📈" : "📉"; // Зеленая стрелка вверх (Pump) или красная стрелка вниз (Dump)
+        String fireEmoji = "🔥"; // Emoji огня, который будет под сообщением
+
+        // Формируем сообщение с emoji
+        String message = String.format("%s %s\n изменение цены: %.2f%% %s",
+        directionEmoji, event.getSymbol() + " (" + pumpOrDump + ")",
+                event.getPriceChange(), fireEmoji);
+
         System.out.println("Отправка сообщения: " + message);
         sendMessageToAllUsers(message);
     }
