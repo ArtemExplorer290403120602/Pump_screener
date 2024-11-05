@@ -164,10 +164,11 @@ public class BotService extends TelegramLongPollingBot {
         // Определяем emoji для Pump и Dump
         String directionEmoji = pumpOrDump.equals("Pump") ? "📈" : "📉"; // Зеленая стрелка вверх (Pump) или красная стрелка вниз (Dump)
         String fireEmoji = "🔥"; // Emoji огня, который будет под сообщением
+        String alertEmoji = "❗️❗️❗️❗️❗️"; // Три восклицательных знака (emoji) для предупреждения
 
         // Формируем сообщение с emoji
-        String message = String.format("%s %s\n изменение цены: %.2f%% %s",
-        directionEmoji, event.getSymbol() + " (" + pumpOrDump + ")",
+        String message = String.format("%s\n\n %s %s\n изменение цены: %.2f%% %s",
+        alertEmoji, directionEmoji, event.getSymbol() + " (" + pumpOrDump + ")",
                 event.getPriceChange(), fireEmoji);
 
         System.out.println("Отправка сообщения: " + message);
