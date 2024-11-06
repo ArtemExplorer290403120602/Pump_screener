@@ -64,32 +64,6 @@ public class BotService extends TelegramLongPollingBot {
                         e.printStackTrace();
                     }
                     break;
-                case "/check_binance":
-                    String result = binanceService.getAccountStatus();
-                    sendMessageSafely(chatId, result);
-                    break;
-                case "/list_bitcoin_pairs":
-                    List<String> bitcoinPairs = binanceService.getAllBitcoinPairs();
-                    String result1 = "Доступные биткойн-пары:\n" + String.join("\n", bitcoinPairs);
-                    sendMessageSafely(chatId, result1);
-                    break;
-                case "/list_usdt_pairs":
-                    List<String> usdtPairs = binanceService.getAllUsdtPairs();
-                    String result2 = usdtPairs.isEmpty() ? "Нет доступных USDT пар." : "Доступные USDT пары:\n" + String.join("\n", usdtPairs);
-                    sendMessageSafely(chatId, result2);
-                    break;
-                case "/start_monitoring":
-                    priceVolumeWatcher.setMonitoringActive(true);
-                    sendMessageSafely(chatId, "Мониторинг цен и объема запущен.");
-                    break;
-                case "/stop_monitoring":
-                    priceVolumeWatcher.setMonitoringActive(false);
-                    sendMessageSafely(chatId, "Мониторинг цен и объема остановлен.");
-                    break;
-                case "/start_monitoring_all":
-                    priceVolumeWatcher.setMonitoringStarted(true);
-                    sendMessageSafely(chatId, "Мониторинг всех биткойн пар с форматом USDT запущен.");
-                    break;
                 case "/start_monitoring_two_procent":
                     priceVolumeWatcher.setMonitoringTwoPercentActive(true);
                     sendMessageSafely(chatId, "Мониторинг цен с условием роста на 2% запущен.");
@@ -164,7 +138,7 @@ public class BotService extends TelegramLongPollingBot {
 
         // Формируем сообщение с emoji, добавляя символ в обратные апострофы
         String message = String.format("%s\n\n %s ` %s ` (%s)\n изменение цены: %.2f%% %s",
-        alertEmoji, directionEmoji, event.getSymbol(), pumpOrDump,
+                alertEmoji, directionEmoji, event.getSymbol(), pumpOrDump,
                 event.getPriceChange(), fireEmoji);
 
         System.out.println("Отправка сообщения: " + message);

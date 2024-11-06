@@ -21,89 +21,12 @@ public class PriceVolumeWatcher {
     private final ApplicationEventPublisher eventPublisher;
 
     @Setter
-    private boolean monitoringActive = false;
-    @Setter
-    private boolean monitoringStarted = false;
-    @Setter
     private boolean monitoringTwoPercentActive = false;
 
     @Autowired
     public PriceVolumeWatcher(BinanceService binanceService, ApplicationEventPublisher eventPublisher) {
         this.binanceService = binanceService;
         this.eventPublisher = eventPublisher;
-    }
-
-    // Новый метод для получения текущего статуса мониторинга
-    public boolean isMonitoringActive() {
-        return monitoringActive;
-    }
-
-
-    @Scheduled(fixedRate = 60000)
-    public void monitorPrices() {
-        boolean monitoringActive1 = false;
-        if (monitoringActive1) {
-            System.out.println("Мониторинг цен активен");
-            List<String> usdtPairs = binanceService.getAllUsdtPairs();
-            for (String symbol : usdtPairs) {
-                BigDecimal priceChange = binanceService.get1MinutePriceChange(symbol);
-                BigDecimal volume = binanceService.get1MinuteVolume(symbol);
-
-                System.out.println("Обработка символа: " + symbol + " - Изменение цены: " + priceChange + ", Объем: " + volume);
-
-                // Упростите временно условие для тестирования
-                if (priceChange.compareTo(BigDecimal.ZERO) > 0 && volume.compareTo(new BigDecimal("10")) > 0) {
-                    System.out.println("Условия выполнены для: " + symbol);
-                    PriceAlertEventImpl priceAlert = new PriceAlertEventImpl(symbol, priceChange, volume);
-                    eventPublisher.publishEvent(priceAlert);
-                } else {
-                    System.out.println("Условия не выполнены для: " + symbol);
-                }
-            }
-        }
-    }
-
-    @Scheduled(fixedRate = 60000)
-    public void scheduleCandlestickUpdates() {
-        if (monitoringActive) {
-            System.out.println("Мониторинг свечей активен");
-            String[] trackedPairs = {"BTCUSDT", "ETHUSDT", "SOLUSDT", "DOGEUSDT"}; // Фиксированный список пар
-
-            for (String symbol : trackedPairs) {
-                List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                if (!latestCandlesticks.isEmpty()) {
-                    BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
-                    String message = String.format("Последняя свеча для %s:\nОткрытие: %s, Закрытие: %s, Макс.: %s, Мин.: %s, Объем: %s",
-                            symbol, candlestick.getOpen(), candlestick.getClose(), candlestick.getHigh(), candlestick.getLow(), candlestick.getVolume());
-                    System.out.println("Отправка сообщения: " + message);
-                    eventPublisher.publishEvent(new CandlestickEventImpl(symbol, candlestick));
-                } else {
-                    System.out.println("Нет данных для символа: " + symbol);
-                }
-            }
-        }
-    }
-
-    @Scheduled(fixedRate = 60000)
-    public void scheduleCandlestickUpdatesAll() {
-        if (monitoringStarted) {
-            System.out.println("Мониторинг свечей активен");
-
-            // Получаем все пары с USDT
-            List<String> usdtPairs = binanceService.getAllUsdtPairs();
-            for (String symbol : usdtPairs) {
-                List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                if (!latestCandlesticks.isEmpty()) {
-                    BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
-                    String message = String.format("Последняя свеча для %s:\nОткрытие: %s, Закрытие: %s, Макс.: %s, Мин.: %s, Объем: %s",
-                            symbol, candlestick.getOpen(), candlestick.getClose(), candlestick.getHigh(), candlestick.getLow(), candlestick.getVolume());
-                    System.out.println("Отправка сообщения: " + message);
-                    eventPublisher.publishEvent(new CandlestickEventImpl(symbol, candlestick));
-                } else {
-                    System.out.println("Нет данных для символа: " + symbol);
-                }
-            }
-        }
     }
 
     @Scheduled(fixedRate = 60000) // периодичность сообщений
@@ -113,16 +36,21 @@ public class PriceVolumeWatcher {
 
             // Объявляем список символов, которые необходимо отслеживать
             String[] symbolsToTrack = {"BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
-                    "ETHUSDT", "BNBUSDT", "PENDLEUSDT","AVAXUSDT","AAVEUSDT","WIFUSDT","XRPUSDT","TURBOUSDT",
-                    "LINKUSDT","SAGAUSDT","DOGSUSDT","OPUSDT","PIXELUSDT","JASMYUSDT","ZKUSDT","ARBUSDT",
-                    "CATIUSDT","FILUSDT","DOTUSDT","BCHUSDT","EOSUSDT","LTCUSDT","TRXUSDT","ETCUSDT","XLMUSDT","XMRUSDT",
-                    "DASHUSDT","ZECUSDT","XTZUSDT","ATOMUSDT","ONTUSDT","IOTAUSDT","BATUSDT","VETUSDT","NEOUSDT","QTUMUSDT",
-                    "IOSTUSDT","THETAUSDT","ALGOUSDT","ZILUSDT","KNCUSDT","ZRXUSDT","COMPUSDT","OMGUSDT","SXPUSDT","KAVAUSDT",
-                    "BANDUSDT","RLCUSDT","MKRUSDT","SNXUSDT","CELRUSDT","YFIUSDT","BALUSDT","CRVUSDT","TRBUSDT","RUNEUSDT",
-                    "SUSHIUSDT","EGLDUSDT","SOLUSDT","ICXUSDT","STORJUSDT","BLZUSDT","UNIUSDT","FTMUSDT","ENJUSDT","FLMUSDT",
-                    "RENUSDT","KSMUSDT","NEARUSDT","RSRUSDT","LRCUSDT","BELUSDT","AXSUSDT","ALPHAUSDT","ZENUSDT","SKLUSDT",
-                    "1INCHUSDT","CHZUSDT","SANDUSDT","ANKRUSDT","LITUSDT","REEFUSDT","RVNUSDT","SFPUSDT","XEMUSDT","COTIUSDT",
-                    "CHRUSDT","MANAUSDT","ALICEUSDT","HBARUSDT","ONEUSDT","LINAUSDT","STMXUSDT","DENTUSDT"};
+                    "ETHUSDT", "BNBUSDT", "PENDLEUSDT", "AVAXUSDT", "AAVEUSDT", "WIFUSDT", "XRPUSDT", "TURBOUSDT",
+                    "LINKUSDT", "SAGAUSDT", "DOGSUSDT", "OPUSDT", "PIXELUSDT", "JASMYUSDT", "ZKUSDT", "ARBUSDT",
+                    "CATIUSDT", "FILUSDT", "DOTUSDT", "BCHUSDT", "EOSUSDT", "LTCUSDT", "TRXUSDT", "ETCUSDT", "XLMUSDT", "XMRUSDT",
+                    "DASHUSDT", "ZECUSDT", "XTZUSDT", "ATOMUSDT", "ONTUSDT", "IOTAUSDT", "BATUSDT", "VETUSDT", "NEOUSDT", "QTUMUSDT",
+                    "IOSTUSDT", "THETAUSDT", "ALGOUSDT", "ZILUSDT", "KNCUSDT", "ZRXUSDT", "COMPUSDT", "OMGUSDT", "SXPUSDT", "KAVAUSDT",
+                    "BANDUSDT", "RLCUSDT", "MKRUSDT", "SNXUSDT", "CELRUSDT", "YFIUSDT", "BALUSDT", "CRVUSDT", "TRBUSDT", "RUNEUSDT",
+                    "SUSHIUSDT", "EGLDUSDT", "SOLUSDT", "ICXUSDT", "STORJUSDT", "BLZUSDT", "UNIUSDT", "FTMUSDT", "ENJUSDT", "FLMUSDT",
+                    "RENUSDT", "KSMUSDT", "NEARUSDT", "RSRUSDT", "LRCUSDT", "BELUSDT", "AXSUSDT", "ALPHAUSDT", "ZENUSDT", "SKLUSDT",
+                    "1INCHUSDT", "CHZUSDT", "SANDUSDT", "ANKRUSDT", "LITUSDT", "REEFUSDT", "RVNUSDT", "SFPUSDT", "XEMUSDT", "COTIUSDT",
+                    "CHRUSDT", "MANAUSDT", "ALICEUSDT", "HBARUSDT", "ONEUSDT", "LINAUSDT", "STMXUSDT", "DENTUSDT", "HOTUSDT", "MTLUSDT",
+                    "OGNUSDT", "NKNUSDT", "GMXUSDT", "CFXUSDT", "STXUSDT", "BAKEUSDT", "GTCUSDT", "BNXUSDT", "IOTXUSDT", "C98USDT",
+                    "MASKUSDT", "ATAUSDT", "DYDXUSDT", "GALAUSDT", "CELOUSDT", "ARUSDT", "ARPAUSDT", "CTSIUSDT", "LPTUSDT", "ENSUSDT", "PEOPLEUSDT",
+                    "ROSEUSDT", "DUSKUSDT", "FLOWUSDT", "IMXUSDT", "API3USDT", "GMTUSDT", "APEUSDT", "WOOUSDT", "ASTRUSDT", "DARUSDT", "PHBUSDT", "INJUSDT",
+                    "STGUSDT", "SPELLUSDT", "ACHUSDT", "LDOUSDT", "ICPUSDT", "APTUSDT", "QNTUSDT", "FETUSDT", "FXSUSDT", "HOOKUSDT", "MAGICUSDT", "TUSDT",
+                    "HIGHUSDT","MINAUSDT","SSVUSDT"};
 
             for (String symbol : symbolsToTrack) {
                 try {
@@ -136,7 +64,7 @@ public class PriceVolumeWatcher {
                         BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
                         // Если изменение более 2%, отправляем уведомление
-                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(2)) >= 0) {
+                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(1.20)) >= 0) {
                             String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
                             String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
                             System.out.println("Отправка сообщения: " + message);
