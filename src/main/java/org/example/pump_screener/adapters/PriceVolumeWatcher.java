@@ -13,12 +13,16 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class PriceVolumeWatcher {
     private final BinanceService binanceService;
     private final ApplicationEventPublisher eventPublisher;
+    private final HashMap<String, BigDecimal> lastPriceChanges = new HashMap<>();
 
     @Setter
     private boolean monitoringTwoPercentActive = false;
@@ -50,38 +54,58 @@ public class PriceVolumeWatcher {
                     "MASKUSDT", "ATAUSDT", "DYDXUSDT", "GALAUSDT", "CELOUSDT", "ARUSDT", "ARPAUSDT", "CTSIUSDT", "LPTUSDT", "ENSUSDT", "PEOPLEUSDT",
                     "ROSEUSDT", "DUSKUSDT", "FLOWUSDT", "IMXUSDT", "API3USDT", "GMTUSDT", "APEUSDT", "WOOUSDT", "ASTRUSDT", "DARUSDT", "PHBUSDT", "INJUSDT",
                     "STGUSDT", "SPELLUSDT", "ACHUSDT", "LDOUSDT", "ICPUSDT", "APTUSDT", "QNTUSDT", "FETUSDT", "FXSUSDT", "HOOKUSDT", "MAGICUSDT", "TUSDT",
-                    "HIGHUSDT","MINAUSDT","SSVUSDT"};
+                    "HIGHUSDT", "MINAUSDT", "SSVUSDT", "CKBUSDT", "PERPUSDT", "TRUUSDT", "LQTYUSDT", "USDCUSDT", "IDUSDT", "RDNTUSDT", "JOEUSDT",
+                    "TLMUSDT", "AMBUSDT", "LEVERUSDT", "BICOUSDT", "HFTUSDT", "XVSUSDT", "ARKMUSDT", "BLURUSDT", "EDUUSDT", "LOOMUSDT", "AGLDUSDT",
+                    "UMAUSDT", "KEYUSDT", "COMBOUSDT", "NMRUSDT", "MAVUSDT", "XVGUSDT", "AIUSDT", "BONDUSDT", "YGGUSDT", "XAIUSDT", "BNTUSDT",
+                    "OXTUSDT", "SEIUSDT", "CYBERUSDT", "HIFIUSDT", "ARKUSDT", "MANTAUSDT", "WAXPUSDT", "OMUSDT", "RIFUSDT", "POLYXUSDT", "GASUSDT", "POWRUSDT",
+                    "MOVRUSDT", "CAKEUSDT", "MEMEUSDT", "TWTUSDT", "LSKUSDT", "ORDIUSDT", "STEEMUSDT", "BADGERUSDT", "ILVUSDT", "NTRNUSDT", "ALTUSDT", "BEAMXUSDT",
+                    "JUPUSDT", "PYTHUSDT", "SUPERUSDT", "USTCUSDT", "ONGUSDT", "STRKUSDT", "JTOUSDT", "1000SATSUSDT", "AUCTIONUSDT", "RONINUSDT",
+                    "ACEUSDT", "DYMUSDT", "AXLUSDT", "GLMUSDT", "PORTALUSDT", "TONUSDT", "METISUSDT", "AEVOUSDT", "VANRYUSDT", "BOMEUSDT", "ETHFIUSDT", "ENAUSDT",
+                    "WUSDT", "TNSRUSDT", "TAOUSDT", "OMNIUSDT", "REZUSDT", "BBUSDT", "NOTUSDT", "IOUSDT", "LISTAUSDT", "ZROUSDT", "RENDERUSDT", "BANANAUSDT",
+                    "RAREUSDT", "GUSDT", "SYNUSDT", "VOXELUSDT", "ALPACAUSDT", "SUNUSDT", "VIDTUSDT", "NULSUSDT", "MBOXUSDT", "CHESSUSDT", "FLUXUSDT", "BSWUSDT",
+                    "QUICKUSDT", "RPLUSDT", "AERGOUSDT", "POLUSDT", "1MBABYDOGEUSDT", "NEIROUSDT", "KDAUSDT", "FIDAUSDT", "FIOUSDT", "GHSTUSDT",
+                    "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT","SANTOSUSDT"};
 
-            for (String symbol : symbolsToTrack) {
-                try {
-                    List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                    if (!latestCandlesticks.isEmpty()) {
-                        BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
+            // Создание и запуск CompletableFuture для каждого символа
+            CompletableFuture[] futures = Arrays.stream(symbolsToTrack)
+                    .map(symbol -> CompletableFuture.runAsync(() -> processSymbol(symbol)))
+                    .toArray(CompletableFuture[]::new);
 
-                        // Логика для проверки роста на 2%
-                        BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
-                        BigDecimal closePrice = new BigDecimal(candlestick.getClose());
-                        BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-
-                        // Если изменение более 2%, отправляем уведомление
-                        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(1.20)) >= 0) {
-                            String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
-                            String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
-                            System.out.println("Отправка сообщения: " + message);
-                            eventPublisher.publishEvent(new PriceAlertEventImpl(symbol, priceChangePercent, BigDecimal.ZERO));
-                        }
-                    } else {
-                        System.out.println("Нет данных для символа: " + symbol);
-                    }
-                } catch (BinanceClientException e) {
-                    // Обработка ошибки из API при недействительном символе
-                    System.err.println("Ошибка для символа " + symbol + ": " + e.getMessage());
-                } catch (Exception e) {
-                    // Общая обработка ошибок
-                    System.err.println("Ошибка обработки символа " + symbol + ": " + e.getMessage());
-                }
-            }
+            // ожидание завершения всех задач
+            CompletableFuture.allOf(futures).join();
         }
     }
 
+    private void processSymbol(String symbol) {
+        try {
+            List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+            if (!latestCandlesticks.isEmpty()) {
+                BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
+
+                // Логика для проверки роста на 2%
+                BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
+                BigDecimal closePrice = new BigDecimal(candlestick.getClose());
+                BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+
+                // Если изменение более 2%, отправляем уведомление
+                if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.30)) >= 0) {
+                    // Проверка, изменилось ли значение с момента последнего уведомления
+                    BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
+                    if (lastChange.compareTo(priceChangePercent) != 0) {
+                        lastPriceChanges.put(symbol, priceChangePercent);
+                        String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
+                        String message = String.format("Цена %s за последнюю минуту %s на %.2f%%", symbol, direction, priceChangePercent);
+                        System.out.println("Отправка сообщения: " + message);
+                        eventPublisher.publishEvent(new PriceAlertEventImpl(symbol, priceChangePercent, BigDecimal.ZERO));
+                    }
+                }
+            } else {
+                System.out.println("Нет данных для символа: " + symbol);
+            }
+        } catch (BinanceClientException e) {
+            System.err.println("Ошибка для символа " + symbol + ": " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Ошибка обработки символа " + symbol + ": " + e.getMessage());
+        }
+    }
 }
