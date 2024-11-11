@@ -5,6 +5,7 @@ import com.binance.connector.client.exceptions.BinanceClientException;
 import lombok.Setter;
 import org.example.pump_screener.service.BinanceService;
 import org.example.pump_screener.service.BotService;
+import org.example.pump_screener.socket.Candlestick;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -78,17 +79,17 @@ public class PriceVolumeWatcher {
 
     private void processSymbol(String symbol) {
         try {
-            List<BinanceService.Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+            List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
             if (!latestCandlesticks.isEmpty()) {
-                BinanceService.Candlestick candlestick = latestCandlesticks.get(0);
+                Candlestick candlestick = latestCandlesticks.get(0);
 
-                // Логика для проверки роста на 2%
+
                 BigDecimal openPrice = new BigDecimal(candlestick.getOpen());
                 BigDecimal closePrice = new BigDecimal(candlestick.getClose());
                 BigDecimal priceChangePercent = (closePrice.subtract(openPrice)).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
 
-                // Если изменение более 2%, отправляем уведомление
-                if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.30)) >= 0) {
+
+                if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(1.30)) >= 0) {
                     // Проверка, изменилось ли значение с момента последнего уведомления
                     BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
                     if (lastChange.compareTo(priceChangePercent) != 0) {

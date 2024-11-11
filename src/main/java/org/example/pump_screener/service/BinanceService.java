@@ -4,6 +4,7 @@ import com.binance.connector.client.SpotClient;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
+import org.example.pump_screener.socket.Candlestick;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -80,25 +81,4 @@ public class BinanceService {
         return candlesticks;
     }
 
-    // Добавляем класс Candlestick
-    @Data
-    public class Candlestick {
-        private long openTime;
-        private String open;
-        private String high;
-        private String low;
-        private String close;
-        private String volume;
-        private long closeTime;
-
-        public Candlestick(long openTime, String open, String high, String low, String close, String volume, long closeTime) {
-            this.openTime = openTime;
-            this.open = open;
-            this.high = high;
-            this.low = low;
-            this.close = close;
-            this.volume = volume;
-            this.closeTime = closeTime;
-        }
-    }
 }

@@ -4,6 +4,7 @@ import org.example.pump_screener.adapters.PriceVolumeWatcher;
 import org.example.pump_screener.adapters.binance.CandlestickEvent;
 import org.example.pump_screener.adapters.binance.PriceAlertEvent;
 import org.example.pump_screener.config.BotConfig;
+import org.example.pump_screener.socket.Candlestick;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -148,7 +149,7 @@ public class BotService extends TelegramLongPollingBot {
     @EventListener
     public void handleCandlestickEvent(CandlestickEvent event) {
         String symbol = event.getSymbol();
-        BinanceService.Candlestick candlestick = event.getCandlestick();
+        Candlestick candlestick = event.getCandlestick();
         String message = String.format("Последняя свеча для %s: Открытие: %s, Закрытие: %s, Макс.: %s, Мин.: %s, Объем: %s",
                 symbol, candlestick.getOpen(), candlestick.getClose(), candlestick.getHigh(), candlestick.getLow(), candlestick.getVolume());
         System.out.println("Обработка события свечи: " + message);
