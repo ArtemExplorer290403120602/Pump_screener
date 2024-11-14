@@ -1,8 +1,6 @@
 package org.example.pump_screener.service;
 
-import org.example.pump_screener.adapters.PriceVolumeWatcher;
 import org.example.pump_screener.adapters.binance.CandlestickEvent;
-import org.example.pump_screener.adapters.binance.PriceAlertEvent;
 import org.example.pump_screener.config.BotConfig;
 import org.example.pump_screener.socket.Candlestick;
 import org.springframework.context.event.EventListener;
@@ -16,7 +14,6 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,17 +21,14 @@ import java.util.List;
 public class BotService extends TelegramLongPollingBot {
     private final BotConfig config;
     private final BinanceService binanceService;
-    private final PriceVolumeWatcher priceVolumeWatcher;
     private List<Long> chatIds = new ArrayList<>();
 
-    public BotService(BotConfig config, BinanceService binanceService, PriceVolumeWatcher priceVolumeWatcher) {
+    public BotService(BotConfig config, BinanceService binanceService) {
         this.config = config;
         this.binanceService = binanceService;
-        this.priceVolumeWatcher = priceVolumeWatcher;
 
         List<BotCommand> listOfBotCommands = new ArrayList<>();
         listOfBotCommands.add(new BotCommand("/start", "Перезапуск бота и добавление пользователя в бота"));
-        listOfBotCommands.add(new BotCommand("/start_monitoring_two_procent", "Запускает мониторинг цен с условием роста на 2%."));
         try {
             execute(new SetMyCommands(listOfBotCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -64,10 +58,6 @@ public class BotService extends TelegramLongPollingBot {
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
                     }
-                    break;
-                case "/start_monitoring_two_procent":
-                    priceVolumeWatcher.setMonitoringTwoPercentActive(true);
-                    sendMessageSafely(chatId, "Мониторинг цен с условием роста на 2% запущен.");
                     break;
                 default:
                     sendMessageSafely(chatId, "Пока ничего не придумал");
@@ -126,24 +116,6 @@ public class BotService extends TelegramLongPollingBot {
         }
         String answer = "Привет " + name + ", это бот поможет тебе отслеживать изменение цены свечи на графике ( время 1 минута) !";
         sendMessage(chatId, answer);
-    }
-
-    @EventListener
-    public void handlePriceAlert(PriceAlertEvent event) {
-        String pumpOrDump = event.getPriceChange().compareTo(BigDecimal.ZERO) > 0 ? "Pump" : "Dump";
-
-        // Определяем emoji для Pump и Dump
-        String directionEmoji = pumpOrDump.equals("Pump") ? "📈" : "📉"; // Зеленая стрелка вверх (Pump) или красная стрелка вниз (Dump)
-        String fireEmoji = "🔥"; // Emoji огня, который будет под сообщением
-        String alertEmoji = "❗️❗️❗️❗️❗️"; // Три восклицательных знака (emoji) для предупреждения
-
-        // Формируем сообщение с emoji, добавляя символ в обратные апострофы
-        String message = String.format("%s\n\n %s ` %s ` (%s)\n изменение цены: %.2f%% %s",
-                alertEmoji, directionEmoji, event.getSymbol(), pumpOrDump,
-                event.getPriceChange(), fireEmoji);
-
-        System.out.println("Отправка сообщения: " + message);
-        sendMessageToAllUsers(message);
     }
 
     @EventListener

@@ -132,15 +132,37 @@ public class WebSocketClient {
         String symbol = event.getSymbol();
         BigDecimal openPrice = new BigDecimal(event.getCandlestick().getOpen());
         BigDecimal closePrice = new BigDecimal(event.getCandlestick().getClose());
-        BigDecimal priceChangePercent = closePrice.subtract(openPrice).divide(openPrice, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        BigDecimal priceChangePercent = closePrice.subtract(openPrice)
+                .divide(openPrice, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+
+        //Получение объема
+        BigDecimal volume = new BigDecimal(event.getCandlestick().getVolume());
+
+        // Форматирование объема до 2 знаков после запятой
+        BigDecimal formattedVolume = volume.setScale(2, RoundingMode.HALF_UP);
+
+        // Обчисление суммы в долларах (при этом closePrice - это цена закрытия)
+        BigDecimal totalValueInUSD = closePrice.multiply(formattedVolume).setScale(2, RoundingMode.HALF_UP);
 
         // Проверяем, изменилось ли значение
-        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(1.00)) >= 0) {
+        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.30)) >= 0) {
             BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
+
             if (lastChange.compareTo(priceChangePercent) != 0) {
                 lastPriceChanges.put(symbol, priceChangePercent);
-                String direction = priceChangePercent.compareTo(BigDecimal.ZERO) > 0 ? "выросла" : "упала";
-                String message = String.format("❗️❗️❗️❗️❗️\n\n%s %s (Pump)\n изменение цены: %.2f%% 🔥", symbol, direction, priceChangePercent);
+                String direction;
+                String emoji;
+
+                if (priceChangePercent.compareTo(BigDecimal.ZERO) > 0) {
+                    direction = "Pump";
+                    emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
+                } else {
+                    direction = "Dump";
+                    emoji = "\uD83D\uDCC9"; // Красная стрелка вниз
+                }
+
+                String message = String.format("❗️❗️❗️❗️❗️\n\n`%s` %s\n\n%s изменение цены: %.2f%% 🔥\n\nОбъем: %s\uD83E\uDD11 \n\nСумма в долларах: %s\uD83D\uDCB5", symbol, direction, emoji, priceChangePercent,formattedVolume, totalValueInUSD);
                 botService.sendMessageToAllUsers(message);  // Отправляем сообщение в бот
             }
         }

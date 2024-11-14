@@ -56,7 +56,7 @@ public class BinanceService {
         parameters.put("interval", "1m"); // Интервал 1 минута
         parameters.put("limit", 1); // Получаем только последнюю свечу
 
-        String response = spotClient.createMarket().klines(parameters); // Используем klines вместо candlestick
+        String response = spotClient.createMarket().klines(parameters);
 
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode rootNode;
