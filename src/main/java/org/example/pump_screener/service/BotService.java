@@ -2,18 +2,22 @@ package org.example.pump_screener.service;
 
 import org.example.pump_screener.adapters.binance.CandlestickEvent;
 import org.example.pump_screener.config.BotConfig;
+import org.example.pump_screener.graphics.ChartGenerator;
 import org.example.pump_screener.socket.Candlestick;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,17 +77,29 @@ public class BotService extends TelegramLongPollingBot {
             System.err.println("Ошибка отправки сообщения для chatId: " + chatId + ", сообщение: " + message + ", ошибка: " + e.getMessage());
         }
     }
-
-    public void sendMessageToAllUsers(String message) {
+    public void sendMessageToAllUsers(String message, String symbol, List<Candlestick> candlesticks) {
         System.out.println("Отправка сообщения всем пользователям: " + message);
+        File chartFile = ChartGenerator.createCandlestickChart(symbol, candlesticks); // Генерация графика
         for (Long chatId : chatIds) {
             try {
+                // Добавляем график в сообщение
+                sendPhoto(chatId, chartFile);
                 sendMessage(chatId, message);
             } catch (TelegramApiException e) {
                 // Логируем ошибку отправки сообщения для конкретного пользователя
                 System.err.println("Ошибка отправки сообщения для chatId: " + chatId + ", ошибка: " + e.getMessage());
             }
         }
+    }
+
+    private void sendPhoto(long chatId, File photo) throws TelegramApiException {
+        SendPhoto sendPhotoRequest = new SendPhoto();
+        sendPhotoRequest.setChatId(String.valueOf(chatId));
+
+        // Создаем InputFile на основе File
+        InputFile inputFile = new InputFile(photo);
+        sendPhotoRequest.setPhoto(inputFile); // Прикрепите сгенерированный график
+        execute(sendPhotoRequest);
     }
 
     private void sendMessage(long chatId, String sendText) throws TelegramApiException {
@@ -125,6 +141,11 @@ public class BotService extends TelegramLongPollingBot {
         String message = String.format("Последняя свеча для %s: Открытие: %s, Закрытие: %s, Макс.: %s, Мин.: %s, Объем: %s",
                 symbol, candlestick.getOpen(), candlestick.getClose(), candlestick.getHigh(), candlestick.getLow(), candlestick.getVolume());
         System.out.println("Обработка события свечи: " + message);
-        sendMessageToAllUsers(message);
+
+        // Получаем последние свечи для символа
+        List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+
+        // Теперь вызываем метод с необходимыми параметрами
+        sendMessageToAllUsers(message, symbol, latestCandlesticks);
     }
 }

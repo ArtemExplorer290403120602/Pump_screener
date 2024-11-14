@@ -146,7 +146,7 @@ public class WebSocketClient {
         BigDecimal totalValueInUSD = closePrice.multiply(formattedVolume).setScale(2, RoundingMode.HALF_UP);
 
         // Проверяем, изменилось ли значение
-        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.30)) >= 0) {
+        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.60)) >= 0) {
             BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
 
             if (lastChange.compareTo(priceChangePercent) != 0) {
@@ -163,7 +163,8 @@ public class WebSocketClient {
                 }
 
                 String message = String.format("❗️❗️❗️❗️❗️\n\n`%s` %s\n\n%s изменение цены: %.2f%% 🔥\n\nОбъем: %s\uD83E\uDD11 \n\nСумма в долларах: %s\uD83D\uDCB5", symbol, direction, emoji, priceChangePercent,formattedVolume, totalValueInUSD);
-                botService.sendMessageToAllUsers(message);  // Отправляем сообщение в бот
+                List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+                botService.sendMessageToAllUsers(message,symbol,latestCandlesticks);  // Отправляем сообщение в бот
             }
         }
     }
