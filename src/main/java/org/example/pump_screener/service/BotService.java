@@ -111,6 +111,9 @@ public class BotService extends TelegramLongPollingBot {
         message.setText(sendText);
         message.setParseMode("Markdown"); // Указываем режим форматирования
 
+        // Отключаем предпросмотр ссылок
+        message.setDisableWebPagePreview(true); // Эта строка отключает предпросмотр ссылок
+
         if (sendText.length() > maxMessageLength) {
             int start = 0;
             while (start < sendText.length()) {
