@@ -70,7 +70,7 @@ public class WebSocketClient {
                     "QUICKUSDT", "RPLUSDT", "AERGOUSDT", "POLUSDT", "1MBABYDOGEUSDT", "NEIROUSDT", "KDAUSDT", "FIDAUSDT", "FIOUSDT", "GHSTUSDT",
                     "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT","SANTOSUSDT");
             for (String symbol : symbolsToTrack) {
-                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_1m";
+                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_4h";
                 container.connectToServer(this, URI.create(endpoint));
             }
         } catch (Exception e) {
@@ -136,7 +136,7 @@ public class WebSocketClient {
                 .divide(openPrice, 4, RoundingMode.HALF_UP)
                 .multiply(BigDecimal.valueOf(100));
 
-        //Получение объема
+        // Получение объема
         BigDecimal volume = new BigDecimal(event.getCandlestick().getVolume());
 
         // Форматирование объема до 2 знаков после запятой
@@ -146,7 +146,7 @@ public class WebSocketClient {
         BigDecimal totalValueInUSD = closePrice.multiply(formattedVolume).setScale(2, RoundingMode.HALF_UP);
 
         // Проверяем, изменилось ли значение
-        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.05)) >= 0) {
+        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(4.00)) >= 0 && volume.compareTo(BigDecimal.valueOf(5_000_000)) > 0) {
             BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
 
             if (lastChange.compareTo(priceChangePercent) != 0) {
@@ -154,18 +154,18 @@ public class WebSocketClient {
                 String direction;
                 String emoji;
 
+                // Оставим обработку только для "pump"
                 if (priceChangePercent.compareTo(BigDecimal.ZERO) > 0) {
                     direction = "Pump";
                     emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
-                } else {
-                    direction = "Dump";
-                    emoji = "\uD83D\uDCC9"; // Красная стрелка вниз
+
+                    // Формируем ссылку на график Binance
+                    String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol); // Изменение URL
+                    String message = String.format("❗️❗️❗️❗️❗️\n\n`%s` %s\n\n%s изменение цены: %.2f%% 🔥\n\n\uD83E\uDD11Объем: %s\uD83E\uDD11 \n\n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\n\n \uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅", symbol, direction, emoji, priceChangePercent, formattedVolume, totalValueInUSD, tradingUrl);
+                    List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+                    botService.sendMessageToAllUsers(message, symbol, latestCandlesticks);  // Отправляем сообщение в бот
                 }
-                // Формируем ссылку на график Binance
-                String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol); // Изменение URL
-                String message = String.format("❗️❗️❗️❗️❗️\n\n`%s` %s\n\n%s изменение цены: %.2f%% 🔥\n\n\uD83E\uDD11Объем: %s\uD83E\uDD11 \n\n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\n\n \uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅", symbol, direction, emoji, priceChangePercent,formattedVolume, totalValueInUSD,tradingUrl);
-                List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                botService.sendMessageToAllUsers(message,symbol,latestCandlesticks);  // Отправляем сообщение в бот
+                // Мы просто не делаем ничего для "dump"
             }
         }
     }
