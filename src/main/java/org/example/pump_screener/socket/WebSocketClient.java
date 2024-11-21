@@ -70,7 +70,7 @@ public class WebSocketClient {
                     "QUICKUSDT", "RPLUSDT", "AERGOUSDT", "POLUSDT", "1MBABYDOGEUSDT", "NEIROUSDT", "KDAUSDT", "FIDAUSDT", "FIOUSDT", "GHSTUSDT",
                     "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT","SANTOSUSDT");
             for (String symbol : symbolsToTrack) {
-                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_1m";
+                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_4h";
                 container.connectToServer(this, URI.create(endpoint));
             }
         } catch (Exception e) {
@@ -146,7 +146,7 @@ public class WebSocketClient {
         BigDecimal totalValueInUSD = closePrice.multiply(formattedVolume).setScale(2, RoundingMode.HALF_UP);
 
         // Проверяем, изменилось ли значение
-        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(0.05)) >= 0) {
+        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(4.00)) >= 0) {
             BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
 
             if (lastChange.compareTo(priceChangePercent) != 0) {
