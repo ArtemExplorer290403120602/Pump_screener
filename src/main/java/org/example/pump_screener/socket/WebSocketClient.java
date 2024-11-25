@@ -145,28 +145,46 @@ public class WebSocketClient {
         // Обчисление суммы в долларах (при этом closePrice - это цена закрытия)
         BigDecimal totalValueInUSD = closePrice.multiply(formattedVolume).setScale(2, RoundingMode.HALF_UP);
 
-        // Проверяем, изменилось ли значение
-        if (priceChangePercent.abs().compareTo(BigDecimal.valueOf(4.00)) >= 0 && volume.compareTo(BigDecimal.valueOf(5_000_000)) > 0) {
-            BigDecimal lastChange = lastPriceChanges.getOrDefault(symbol, BigDecimal.ZERO);
+        // Получение предыдущей свечи для расчета дельты и роста объемов
+        BigDecimal lastClosePrice = lastPriceChanges.getOrDefault(symbol + "_lastClose", BigDecimal.ZERO);
+        BigDecimal lastVolume = lastPriceChanges.getOrDefault(symbol + "_lastVolume", BigDecimal.ZERO);
 
-            if (lastChange.compareTo(priceChangePercent) != 0) {
-                lastPriceChanges.put(symbol, priceChangePercent);
-                String direction;
-                String emoji;
+        // Расчет дельты и роста объемов
+        BigDecimal priceDelta = lastClosePrice.compareTo(BigDecimal.ZERO) > 0
+                ? closePrice.subtract(lastClosePrice)
+                .divide(lastClosePrice, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                : BigDecimal.ZERO;
 
-                // Оставим обработку только для "pump"
-                if (priceChangePercent.compareTo(BigDecimal.ZERO) > 0) {
-                    direction = "Pump";
-                    emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
+        BigDecimal volumeGrowth = lastVolume.compareTo(BigDecimal.ZERO) > 0
+                ? volume.subtract(lastVolume)
+                .divide(lastVolume, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                : BigDecimal.ZERO;
 
-                    // Формируем ссылку на график Binance
-                    String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol); // Изменение URL
-                    String message = String.format("❗️❗️❗️❗️❗️\n\n`%s` %s\n\n%s изменение цены: %.2f%% 🔥\n\n\uD83E\uDD11Объем: %s\uD83E\uDD11 \n\n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\n\n \uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅", symbol, direction, emoji, priceChangePercent, formattedVolume, totalValueInUSD, tradingUrl);
-                    List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
-                    botService.sendMessageToAllUsers(message, symbol, latestCandlesticks);  // Отправляем сообщение в бот
-                }
-                // Мы просто не делаем ничего для "dump"
-            }
+        // Сохраняем последние значения
+        lastPriceChanges.put(symbol + "_lastClose", closePrice);
+        lastPriceChanges.put(symbol + "_lastVolume", volume);
+
+        // Проверяем условия для отправки уведомления
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(2.5)) >= 0 &&
+                priceChangePercent.compareTo(BigDecimal.valueOf(3.5)) <= 0 &&
+                volume.compareTo(BigDecimal.valueOf(5_000_000)) > 0 &&
+                priceDelta.compareTo(BigDecimal.valueOf(2)) >= 0 && // Условие изменения дельты от 2 до 4
+                priceDelta.compareTo(BigDecimal.valueOf(4)) <= 0 &&
+                volumeGrowth.compareTo(BigDecimal.valueOf(100)) >= 0 &&  // Изменение объемов от 100 до 300
+                volumeGrowth.compareTo(BigDecimal.valueOf(300)) <= 0) {
+
+            // Формируем сообщение для бота
+            String direction = "Pump";
+            String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
+            String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
+
+            String message = String.format("❗️❗️❗️❗️❗️\n`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n\uD83E\uDD11Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
+            symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, formattedVolume, totalValueInUSD, tradingUrl);
+
+            List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+            botService.sendMessageToAllUsers(message, symbol, latestCandlesticks);  // Отправляем сообщение в бот
         }
     }
 }
