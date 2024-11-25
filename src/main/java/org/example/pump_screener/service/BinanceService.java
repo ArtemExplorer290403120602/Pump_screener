@@ -115,4 +115,34 @@ public class BinanceService {
         return rsi;
     }
 
+    public BigDecimal[] calculateMACD(String symbol) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+        if (candlesticks.size() < 26) {
+            return new BigDecimal[]{null, null, null}; // Недостаточно данных для расчета MACD
+        }
+
+        // Получаем цены закрытия
+        List<BigDecimal> closingPrices = new ArrayList<>();
+        for (Candlestick candlestick : candlesticks) {
+            closingPrices.add(new BigDecimal(candlestick.getClose()));
+        }
+
+        BigDecimal ema12 = calculateEMA(closingPrices, 12);
+        BigDecimal ema26 = calculateEMA(closingPrices, 26);
+        BigDecimal macdLine = ema12.subtract(ema26);
+        BigDecimal signalLine = calculateEMA(List.of(macdLine), 9); // Здесь нужно будет хранить историю MACD для расчета сигнальной линии
+
+        return new BigDecimal[]{macdLine, signalLine, macdLine.subtract(signalLine)}; // Возвращаем MACD, сигнальную линию и гистограмму
+    }
+
+    private BigDecimal calculateEMA(List<BigDecimal> prices, int period) {
+        BigDecimal multiplier = BigDecimal.valueOf(2).divide(BigDecimal.valueOf(period + 1), RoundingMode.HALF_UP);
+        BigDecimal ema = prices.get(0); // Начальное значение EMA можно взять как первую цену
+
+        for (int i = 1; i < prices.size(); i++) {
+            ema = (prices.get(i).subtract(ema)).multiply(multiplier).add(ema);
+        }
+
+        return ema;
+    }
 }

@@ -151,6 +151,11 @@ public class WebSocketClient {
 
         BigDecimal rsi = binanceService.calculateRSI(symbol, 14); // 14 периодов для RSI
 
+        // Получаем значения MACD
+        BigDecimal[] macdValues = binanceService.calculateMACD(symbol);
+        BigDecimal macdLine = macdValues[0];
+        BigDecimal signalLine = macdValues[1];
+        BigDecimal macdHistogram = macdValues[2];
 
         // Расчет дельты и роста объемов
         BigDecimal priceDelta = lastClosePrice.compareTo(BigDecimal.ZERO) > 0
@@ -183,8 +188,9 @@ public class WebSocketClient {
             String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            String message = String.format("❗️❗️❗️❗️❗️\n`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s\uD83E\uDD11Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
-            symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, formattedVolume, totalValueInUSD, tradingUrl);
+            // Формируем сообщение для бота, добавляя информацию о MACD
+            String message = String.format("❗️❗️❗️❗️❗️\n`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s\n MACD: %s\n Signal Line: %s\n MACD Histogram: %s\n Объем: %s\n Сумма в долларах: %s\n[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, macdLine, signalLine, macdHistogram, formattedVolume, totalValueInUSD, tradingUrl);
 
             List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
