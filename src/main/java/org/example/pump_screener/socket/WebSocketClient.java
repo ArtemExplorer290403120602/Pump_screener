@@ -70,7 +70,7 @@ public class WebSocketClient {
                     "QUICKUSDT", "RPLUSDT", "AERGOUSDT", "POLUSDT", "1MBABYDOGEUSDT", "NEIROUSDT", "KDAUSDT", "FIDAUSDT", "FIOUSDT", "GHSTUSDT",
                     "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT","SANTOSUSDT");
             for (String symbol : symbolsToTrack) {
-                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_4h";
+                String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_1h";
                 container.connectToServer(this, URI.create(endpoint));
             }
         } catch (Exception e) {

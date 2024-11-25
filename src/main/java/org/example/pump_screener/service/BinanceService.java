@@ -53,7 +53,7 @@ public class BinanceService {
     public List<Candlestick> getLatestCandlesticks(String symbol) {
         HashMap<String, Object> parameters = new HashMap<>();
         parameters.put("symbol", symbol);
-        parameters.put("interval", "4h"); // Используйте 1 минута
+        parameters.put("interval", "1h"); // Используйте 1 минута
         parameters.put("limit", 50); // Получить последние 50 свечей
 
         String response = spotClient.createMarket().klines(parameters);
