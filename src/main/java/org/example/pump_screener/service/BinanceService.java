@@ -8,6 +8,7 @@ import org.example.pump_screener.socket.Candlestick;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +80,39 @@ public class BinanceService {
             e.printStackTrace();
         }
         return candlesticks;
+    }
+
+    public BigDecimal calculateRSI(String symbol, int periods) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+
+        if (candlesticks.size() < periods) {
+            return null; // Недостаточно данных для расчета RSI
+        }
+
+        BigDecimal totalGain = BigDecimal.ZERO;
+        BigDecimal totalLoss = BigDecimal.ZERO;
+
+        for (int i = 1; i <= periods; i++) {
+            BigDecimal change = new BigDecimal(candlesticks.get(i).getClose())
+                    .subtract(new BigDecimal(candlesticks.get(i - 1).getClose()));
+            if (change.compareTo(BigDecimal.ZERO) > 0) {
+                totalGain = totalGain.add(change);
+            } else {
+                totalLoss = totalLoss.add(change.abs());
+            }
+        }
+
+        BigDecimal averageGain = totalGain.divide(BigDecimal.valueOf(periods), 4, RoundingMode.HALF_UP);
+        BigDecimal averageLoss = totalLoss.divide(BigDecimal.valueOf(periods), 4, RoundingMode.HALF_UP);
+
+        if (averageLoss.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.valueOf(100); // Если потерь нет, RSI = 100
+        }
+
+        BigDecimal rs = averageGain.divide(averageLoss, 4, RoundingMode.HALF_UP);
+        BigDecimal rsi = BigDecimal.valueOf(100).subtract(BigDecimal.valueOf(100).divide(BigDecimal.ONE.add(rs), 4, RoundingMode.HALF_UP));
+
+        return rsi;
     }
 
 }
