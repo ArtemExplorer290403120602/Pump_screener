@@ -167,6 +167,50 @@ public class BinanceService {
         return new BigDecimal[]{stochasticK, stochasticD}; // Возвращаем возможные n/a вместо 0 для D
     }
 
+    public BigDecimal[] calculateBollingerBands(String symbol, int period, int k) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+        if (candlesticks.size() < period) {
+            return new BigDecimal[]{null, null, null}; // Недостаточно данных
+        }
+
+        List<BigDecimal> closingPrices = candlesticks.stream()
+                .map(candlestick -> new BigDecimal(candlestick.getClose()))
+                .toList();
+
+        // Расчет SMA
+        BigDecimal sma = calculateSMA1(closingPrices, period);
+        if (sma == null) {
+            return new BigDecimal[]{null, null, null};
+        }
+
+        // Расчет стандартного отклонения
+        BigDecimal variance = BigDecimal.ZERO;
+        for (int i = closingPrices.size() - period; i < closingPrices.size(); i++) {
+            BigDecimal deviation = closingPrices.get(i).subtract(sma);
+            variance = variance.add(deviation.multiply(deviation));
+        }
+        BigDecimal stdDev = BigDecimal.valueOf(Math.sqrt(variance.divide(BigDecimal.valueOf(period), 10, RoundingMode.HALF_UP).doubleValue()));
+
+        // Вычисление верхней и нижней границы
+        BigDecimal upperBand = sma.add(stdDev.multiply(BigDecimal.valueOf(k)));
+        BigDecimal lowerBand = sma.subtract(stdDev.multiply(BigDecimal.valueOf(k)));
+
+        return new BigDecimal[]{sma, upperBand, lowerBand}; // возвращаем SMA, Upper Band и Lower Band
+    }
+
+    private BigDecimal calculateSMA1(List<BigDecimal> prices, int period) {
+        if (prices.size() < period) {
+            return null; // Недостаточно данных
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = prices.size() - period; i < prices.size(); i++) {
+            total = total.add(prices.get(i));
+        }
+
+        return total.divide(BigDecimal.valueOf(period), 4, RoundingMode.HALF_UP);
+    }
+
     // Метод для расчета SMA за n периодов на основе K
     private BigDecimal calculateSMA(List<BigDecimal> kValues, int n) {
         if (kValues.size() < n) {

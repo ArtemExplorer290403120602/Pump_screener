@@ -181,10 +181,21 @@ public class WebSocketClient {
         BigDecimal stochasticK = stochasticValues[0];
         BigDecimal stochasticD = stochasticValues[1];
 
+        // Получение значений индикатора Боллинджера
+        BigDecimal[] bollingerBands = binanceService.calculateBollingerBands(symbol, 14, 2);
+        BigDecimal sma = bollingerBands[0];
+        BigDecimal upperBand = bollingerBands[1];
+        BigDecimal lowerBand = bollingerBands[2];
+
         // Проверяем наличие значения
         String williamsRString = williamsR != null ? williamsR.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String stochasticKString = stochasticK != null ? stochasticK.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String stochasticDString = stochasticD != null ? stochasticD.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+
+        // Форматирование Боллинджера
+        String smaString = sma != null ? sma.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+        String upperBandString = upperBand != null ? upperBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+        String lowerBandString = lowerBand != null ? lowerBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
 
         // Сохраняем последние значения
         lastPriceChanges.put(symbol + "_lastClose", closePrice);
@@ -204,9 +215,8 @@ public class WebSocketClient {
             String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            // Добавляем Стохастик в сообщение
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, formattedVolume, totalValueInUSD, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s SMA: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, smaString, formattedVolume, totalValueInUSD, tradingUrl, upperBandString, lowerBandString);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
         }
@@ -220,9 +230,8 @@ public class WebSocketClient {
             String emoji = "\uD83D\uDCA3"; // Красная стрелка вниз
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            // Добавляем Стохастик в сообщение
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, formattedVolume, totalValueInUSD, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s SMA: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, smaString, formattedVolume, totalValueInUSD, tradingUrl, upperBandString, lowerBandString);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
         }
