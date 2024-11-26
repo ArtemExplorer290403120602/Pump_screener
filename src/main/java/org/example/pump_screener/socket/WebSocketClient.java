@@ -182,10 +182,10 @@ public class WebSocketClient {
         BigDecimal stochasticD = stochasticValues[1];
 
         // Получение значений индикатора Боллинджера
-        BigDecimal[] bollingerBands = binanceService.calculateBollingerBands(symbol, 14, 2);
-        BigDecimal sma = bollingerBands[0];
-        BigDecimal upperBand = bollingerBands[1];
-        BigDecimal lowerBand = bollingerBands[2];
+        BollingerBands bollingerBands = binanceService.calculateBollingerBands(symbol, 14, 2);
+        BigDecimal sma = bollingerBands.getSma();
+        BigDecimal upperBand = bollingerBands.getUpperBand();
+        BigDecimal lowerBand = bollingerBands.getLowerBand();
 
         // Проверяем наличие значения
         String williamsRString = williamsR != null ? williamsR.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
