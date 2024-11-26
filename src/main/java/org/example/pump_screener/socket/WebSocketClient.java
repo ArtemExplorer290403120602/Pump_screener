@@ -170,11 +170,21 @@ public class WebSocketClient {
         List<BigDecimal> closingPrices = latestCandlesticks.stream()
                 .map(candlestick -> new BigDecimal(candlestick.getClose()))
                 .toList();
+        List<BigDecimal> highPrices = latestCandlesticks.stream().map(candlestick -> new BigDecimal(candlestick.getHigh())).toList();
+        List<BigDecimal> lowPrices = latestCandlesticks.stream().map(candlestick -> new BigDecimal(candlestick.getLow())).toList();
 
         BigDecimal williamsR = binanceService.calculateWilliamsR(closingPrices, 14); // предположим, что мы используем 14 периодов
+        // Расчет Стохастика
+        BigDecimal[] stochasticValues = binanceService.calculateStochastic(closingPrices, highPrices, lowPrices, 14);
+
+        // Получение значений %K и %D
+        BigDecimal stochasticK = stochasticValues[0];
+        BigDecimal stochasticD = stochasticValues[1];
 
         // Проверяем наличие значения
         String williamsRString = williamsR != null ? williamsR.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+        String stochasticKString = stochasticK != null ? stochasticK.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+        String stochasticDString = stochasticD != null ? stochasticD.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
 
         // Сохраняем последние значения
         lastPriceChanges.put(symbol + "_lastClose", closePrice);
@@ -194,8 +204,25 @@ public class WebSocketClient {
             String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, formattedVolume, totalValueInUSD, tradingUrl);
+            // Добавляем Стохастик в сообщение
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, formattedVolume, totalValueInUSD, tradingUrl);
+
+            botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
+        }
+
+        // Добавьте обработку "dump"
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(-0.01)) <= 0 && // Условие изменения цены
+                volume.compareTo(BigDecimal.valueOf(100_000)) > 0) { // Минимальный объем для сигнализации о "dump"
+
+            // Формируем сообщение для бота о "dump"
+            String direction = "Dump";
+            String emoji = "\uD83D\uDCA3"; // Красная стрелка вниз
+            String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
+
+            // Добавляем Стохастик в сообщение
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Стохастик K: %s D: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, stochasticKString, stochasticDString, formattedVolume, totalValueInUSD, tradingUrl);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
         }

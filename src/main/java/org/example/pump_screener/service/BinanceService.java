@@ -17,6 +17,7 @@ import java.util.List;
 @Data
 public class BinanceService {
     private final SpotClient spotClient;
+    private final List<BigDecimal> kValues = new ArrayList<>(); // Хранение значений %K
 
     public BinanceService(SpotClient spotClient) {
         this.spotClient = spotClient;
@@ -137,4 +138,46 @@ public class BinanceService {
         return williamsR;
     }
 
+    public BigDecimal[] calculateStochastic(List<BigDecimal> closingPrices, List<BigDecimal> highPrices, List<BigDecimal> lowPrices, int n) {
+        if (closingPrices.size() < n || highPrices.size() < n || lowPrices.size() < n) {
+            return new BigDecimal[]{BigDecimal.ZERO, null}; // Недостаточно данных
+        }
+
+        BigDecimal latestClose = closingPrices.get(closingPrices.size() - 1);
+        BigDecimal highestHigh = highPrices.subList(highPrices.size() - n, highPrices.size()).stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        BigDecimal lowestLow = lowPrices.subList(lowPrices.size() - n, lowPrices.size()).stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+
+        if (highestHigh.compareTo(lowestLow) == 0) {
+            return new BigDecimal[]{BigDecimal.ZERO, null}; // Избегаем деления на ноль
+        }
+
+        BigDecimal stochasticK = (latestClose.subtract(lowestLow)).divide(highestHigh.subtract(lowestLow), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+
+        // Добавляем новое значение %K в список
+        kValues.add(stochasticK);
+
+        // Ограничиваем размер списка до 14 для %K
+        if (kValues.size() > 14) {
+            kValues.remove(0);
+        }
+
+        // Проверяем наличие достаточных значений для вычисления %D
+        BigDecimal stochasticD = kValues.size() < 3 ? null : calculateSMA(kValues, 3);
+
+        return new BigDecimal[]{stochasticK, stochasticD}; // Возвращаем возможные n/a вместо 0 для D
+    }
+
+    // Метод для расчета SMA за n периодов на основе K
+    private BigDecimal calculateSMA(List<BigDecimal> kValues, int n) {
+        if (kValues.size() < n) {
+            return null; // Недостаточно данных
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = kValues.size() - n; i < kValues.size(); i++) {
+            total = total.add(kValues.get(i));
+        }
+
+        return total.divide(BigDecimal.valueOf(n), 4, RoundingMode.HALF_UP);
+    }
 }
