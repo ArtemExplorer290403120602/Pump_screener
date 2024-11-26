@@ -102,7 +102,8 @@ public class WebSocketClient {
 
     @OnError
     public void onError(Session userSession, Throwable throwable) {
-        System.out.println("WebSocket Error: " + throwable.getMessage());
+        System.err.println("WebSocket Error: " + throwable.getMessage());
+        throwable.printStackTrace(); // Дополнительная информация об ошибке
     }
 
     private CandlestickEvent parseMessage(String message) {
@@ -151,12 +152,6 @@ public class WebSocketClient {
 
         BigDecimal rsi = binanceService.calculateRSI(symbol, 14); // 14 периодов для RSI
 
-        // Получаем значения MACD
-        BigDecimal[] macdValues = binanceService.calculateMACD(symbol);
-        BigDecimal macdLine = macdValues[0];
-        BigDecimal signalLine = macdValues[1];
-        BigDecimal macdHistogram = macdValues[2];
-
         // Расчет дельты и роста объемов
         BigDecimal priceDelta = lastClosePrice.compareTo(BigDecimal.ZERO) > 0
                 ? closePrice.subtract(lastClosePrice)
@@ -170,29 +165,38 @@ public class WebSocketClient {
                 .multiply(BigDecimal.valueOf(100))
                 : BigDecimal.ZERO;
 
+        List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
+        // Собираем здесь последние 14 закрывающих цен для Williams %R
+        List<BigDecimal> closingPrices = latestCandlesticks.stream()
+                .map(candlestick -> new BigDecimal(candlestick.getClose()))
+                .toList();
+
+        BigDecimal williamsR = binanceService.calculateWilliamsR(closingPrices, 14); // предположим, что мы используем 14 периодов
+
+        // Проверяем наличие значения
+        String williamsRString = williamsR != null ? williamsR.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+
         // Сохраняем последние значения
         lastPriceChanges.put(symbol + "_lastClose", closePrice);
         lastPriceChanges.put(symbol + "_lastVolume", volume);
 
         // Проверяем условия для отправки уведомления
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(2.5)) >= 0 &&
-                priceChangePercent.compareTo(BigDecimal.valueOf(3.5)) <= 0 &&
-                volume.compareTo(BigDecimal.valueOf(5_000_000)) > 0 &&
-                priceDelta.compareTo(BigDecimal.valueOf(2)) >= 0 && // Условие изменения дельты от 2 до 4
-                priceDelta.compareTo(BigDecimal.valueOf(4)) <= 0 &&
-                volumeGrowth.compareTo(BigDecimal.valueOf(100)) >= 0 &&  // Изменение объемов от 100 до 300
-                volumeGrowth.compareTo(BigDecimal.valueOf(300)) <= 0) {
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(0)) >= 0 &&
+                priceChangePercent.compareTo(BigDecimal.valueOf(100)) <= 0 &&
+                volume.compareTo(BigDecimal.valueOf(100_000)) > 0 &&
+                priceDelta.compareTo(BigDecimal.valueOf(0)) >= 0 && // Условие изменения дельты от 2 до 4
+                priceDelta.compareTo(BigDecimal.valueOf(9)) <= 0 &&
+                volumeGrowth.compareTo(BigDecimal.valueOf(0)) >= 0 &&  // Изменение объемов от 100 до 300
+                volumeGrowth.compareTo(BigDecimal.valueOf(10000)) <= 0) {
 
             // Формируем сообщение для бота
             String direction = "Pump";
             String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            // Формируем сообщение для бота, добавляя информацию о MACD
-            String message = String.format("❗️❗️❗️❗️❗️\n`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s\n MACD: %s\n Signal Line: %s\n MACD Histogram: %s\n Объем: %s\n Сумма в долларах: %s\n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, macdLine, signalLine, macdHistogram, formattedVolume, totalValueInUSD, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s %s изменение цены: %.2f%% 🔥\n Дельта: %.2f%%\n Рост объемов: %.2f%%\n RSI: %s Williams R: %s Объем: %s\uD83E\uDD11 \n\uD83D\uDCB5Сумма в долларах: %s\uD83D\uDCB5\uD83D\uDC49\uD83C\uDFFD[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, priceDelta, volumeGrowth, rsi, williamsRString, formattedVolume, totalValueInUSD, tradingUrl);
 
-            List<Candlestick> latestCandlesticks = binanceService.getLatestCandlesticks(symbol);
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
         }
     }
