@@ -263,4 +263,99 @@ public class BinanceService {
             super(message);
         }
     }
+
+    public BigDecimal getCurrentPrice(String symbol) {
+        HashMap<String, Object> parameters = new HashMap<>();
+        parameters.put("symbol", symbol);
+
+        // Используем метод tickerSymbol для получения текущей цены
+        String response = spotClient.createMarket().tickerSymbol(parameters);
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            JsonNode rootNode = objectMapper.readTree(response);
+            return new BigDecimal(rootNode.get("price").asText());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return BigDecimal.ZERO; // Возвращаем 0 в случае ошибки
+        }
+    }
+
+    // Метод для расчета вероятности "пампинга"
+    public BigDecimal calculatePumpProbability(BigDecimal priceChangePercent, BigDecimal rsi, BigDecimal macd,
+                                               BigDecimal sma, BigDecimal stochasticK, BigDecimal stochasticD,
+                                               BigDecimal williamsR, BigDecimal upperBand, BigDecimal lowerBand, String symbol) {
+        int score = 0;
+        int totalIndicators = 7; // Общее количество индикаторов
+
+        // Получаем текущую цену
+        BigDecimal currentPrice = getCurrentPrice(symbol);
+
+        // Условия для каждого индикатора
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(2.5)) > 0) score++; // Изменение цены > 2.5%
+        if (rsi.compareTo(BigDecimal.valueOf(30)) < 0) score++; // RSI < 30
+        if (macd.compareTo(BigDecimal.ZERO) > 0) score++; // MACD > 0
+        if (sma != null && currentPrice.compareTo(sma) > 0) score++; // Текущая цена > SMA
+        if (williamsR.compareTo(BigDecimal.valueOf(-20)) > 0) score++; // Williams R > -20
+        if (stochasticK.compareTo(BigDecimal.valueOf(20)) < 0 && stochasticD.compareTo(BigDecimal.valueOf(20)) < 0) score++; // K и D < 20
+        if (currentPrice.compareTo(upperBand) > 0) score++; // Текущая цена > верхней границы Боллинджера
+
+        // Вычисление вероятности
+        return BigDecimal.valueOf((double) score / totalIndicators * 100).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public class MACD {
+        private final BigDecimal macd;
+        private final BigDecimal signal;
+        private final BigDecimal histogram;
+
+        public MACD(BigDecimal macd, BigDecimal signal, BigDecimal histogram) {
+            this.macd = macd;
+            this.signal = signal;
+            this.histogram = histogram;
+        }
+
+        public BigDecimal getMacd() {
+            return macd;
+        }
+
+        public BigDecimal getSignal() {
+            return signal;
+        }
+
+        public BigDecimal getHistogram() {
+            return histogram;
+        }
+    }
+
+    public MACD calculateMACD(String symbol, int shortPeriod, int longPeriod, int signalPeriod) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+
+        if (candlesticks.size() < longPeriod + signalPeriod) {
+            throw new IllegalArgumentException("Недостаточно данных для расчета MACD.");
+        }
+
+        List<BigDecimal> closingPrices = candlesticks.stream()
+                .map(candlestick -> new BigDecimal(candlestick.getClose()))
+                .toList();
+
+        BigDecimal shortEMA = calculateEMA(closingPrices, shortPeriod);
+        BigDecimal longEMA = calculateEMA(closingPrices, longPeriod);
+        BigDecimal macd = shortEMA.subtract(longEMA);
+        BigDecimal signal = calculateEMA(closingPrices.stream().map(price -> price.subtract(macd)).toList(), signalPeriod);
+        BigDecimal histogram = macd.subtract(signal);
+
+        return new MACD(macd, signal, histogram);
+    }
+
+    private BigDecimal calculateEMA(List<BigDecimal> prices, int period) {
+        BigDecimal multiplier = BigDecimal.valueOf(2.0).divide(BigDecimal.valueOf(period + 1), 4, RoundingMode.HALF_UP);
+
+        BigDecimal ema = prices.get(0); // Инициализируем с первым значением
+
+        for (int i = 1; i < prices.size(); i++) {
+            ema = (prices.get(i).subtract(ema)).multiply(multiplier).add(ema);
+        }
+
+        return ema;
+    }
 }

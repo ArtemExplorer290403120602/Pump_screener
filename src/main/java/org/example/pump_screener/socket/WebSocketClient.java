@@ -16,6 +16,8 @@ import java.math.RoundingMode;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import static javax.management.remote.JMXConnectorFactory.connect;
 
@@ -28,6 +30,9 @@ public class WebSocketClient {
 
     private static final String BINANCE_CANDLESTICK_URL = "wss://stream.binance.com:9443/ws/";
     private final HashMap<String, BigDecimal> lastPriceChanges = new HashMap<>();
+    // Добавьте это в начале вашего класса WebSocketClient
+    private final ConcurrentHashMap<String, Long> lastNotificationTime = new ConcurrentHashMap<>();
+    private static final long NOTIFICATION_DELAY = TimeUnit.MINUTES.toMillis(10); // 10 минут в
 
     @Autowired
     public WebSocketClient(BinanceService binanceService, BotService botService) {
@@ -43,7 +48,7 @@ public class WebSocketClient {
     private void connect() {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         try {
-            List<String> symbolsToTrack = List.of("BTCUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
+            List<String> symbolsToTrack = List.of("BTCUSDT", "THEUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
                     "ETHUSDT", "BNBUSDT", "PENDLEUSDT", "AVAXUSDT", "AAVEUSDT", "WIFUSDT", "XRPUSDT", "TURBOUSDT",
                     "LINKUSDT", "SAGAUSDT", "DOGSUSDT", "OPUSDT", "PIXELUSDT", "JASMYUSDT", "ZKUSDT", "ARBUSDT",
                     "CATIUSDT", "FILUSDT", "DOTUSDT", "BCHUSDT", "EOSUSDT", "LTCUSDT", "TRXUSDT", "ETCUSDT", "XLMUSDT", "XMRUSDT",
@@ -68,7 +73,7 @@ public class WebSocketClient {
                     "WUSDT", "TNSRUSDT", "TAOUSDT", "OMNIUSDT", "REZUSDT", "BBUSDT", "NOTUSDT", "IOUSDT", "LISTAUSDT", "ZROUSDT", "RENDERUSDT", "BANANAUSDT",
                     "RAREUSDT", "GUSDT", "SYNUSDT", "VOXELUSDT", "ALPACAUSDT", "SUNUSDT", "VIDTUSDT", "NULSUSDT", "MBOXUSDT", "CHESSUSDT", "FLUXUSDT", "BSWUSDT",
                     "QUICKUSDT", "RPLUSDT", "AERGOUSDT", "POLUSDT", "1MBABYDOGEUSDT", "NEIROUSDT", "KDAUSDT", "FIDAUSDT", "FIOUSDT", "GHSTUSDT",
-                    "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT","SANTOSUSDT");
+                    "LOKAUSDT", "HMSTRUSDT", "REIUSDT", "COSUSDT", "EIGENUSDT", "DIAUSDT", "SCRUSDT", "SANTOSUSDT");
             for (String symbol : symbolsToTrack) {
                 String endpoint = BINANCE_CANDLESTICK_URL + symbol.toLowerCase() + "@kline_1h";
                 container.connectToServer(this, URI.create(endpoint));
@@ -131,6 +136,14 @@ public class WebSocketClient {
 
     private void processPriceChange(CandlestickEvent event) {
         String symbol = event.getSymbol();
+        // Проверяем время последнего уведомления для этого символа
+        long currentTime = System.currentTimeMillis();
+        long lastTime = lastNotificationTime.getOrDefault(symbol, 0L);
+
+        // Если задержка еще не прошла, выходим из метода
+        if (currentTime - lastTime < NOTIFICATION_DELAY) {
+            return; // Пропускаем отправку уведомления
+        }
         BigDecimal openPrice = new BigDecimal(event.getCandlestick().getOpen());
         BigDecimal closePrice = new BigDecimal(event.getCandlestick().getClose());
         BigDecimal priceChangePercent = closePrice.subtract(openPrice)
@@ -143,9 +156,13 @@ public class WebSocketClient {
         // Форматирование объема до 2 знаков после запятой
         BigDecimal formattedVolume = volume.setScale(2, RoundingMode.HALF_UP);
 
+        BinanceService.MACD macd = binanceService.calculateMACD(symbol, 12, 26, 9); // 12, 26, 9 - это стандартные параметры для MACD
+
         // Получение предыдущей свечи для расчета дельты и роста объемов
         BigDecimal lastClosePrice = lastPriceChanges.getOrDefault(symbol + "_lastClose", BigDecimal.ZERO);
         BigDecimal lastVolume = lastPriceChanges.getOrDefault(symbol + "_lastVolume", BigDecimal.ZERO);
+
+        BigDecimal currentPrice = binanceService.getCurrentPrice(symbol); // Получаем текущую цену
 
         BigDecimal rsi = binanceService.calculateRSI(symbol, 14); // 14 периодов для RSI
 
@@ -171,6 +188,21 @@ public class WebSocketClient {
         BigDecimal upperBand = bollingerBands.getUpperBand();
         BigDecimal lowerBand = bollingerBands.getLowerBand();
 
+        // Расчет вероятности "пампинга"
+        // Расчет вероятности "пампинга"
+        BigDecimal pumpProbability = binanceService.calculatePumpProbability(
+                priceChangePercent,
+                rsi,
+                macd.getMacd(),
+                sma,
+                stochasticK,
+                stochasticD,
+                williamsR,
+                upperBand,
+                lowerBand,
+                symbol // Передаем символ
+        );
+
         // Проверяем наличие значения
         String williamsRString = williamsR != null ? williamsR.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String stochasticKString = stochasticK != null ? stochasticK.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
@@ -181,14 +213,19 @@ public class WebSocketClient {
         String upperBandString = upperBand != null ? upperBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String lowerBandString = lowerBand != null ? lowerBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
 
+        // Форматирование MACD для отправки
+        String macdString = macd.getMacd().setScale(2, RoundingMode.HALF_UP).toString();
+        String signalString = macd.getSignal().setScale(2, RoundingMode.HALF_UP).toString();
+        String histogramString = macd.getHistogram().setScale(2, RoundingMode.HALF_UP).toString();
+
         // Сохраняем последние значения
         lastPriceChanges.put(symbol + "_lastClose", closePrice);
         lastPriceChanges.put(symbol + "_lastVolume", volume);
 
         // Проверяем условия для отправки уведомления
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(0)) >= 0 &&
-                priceChangePercent.compareTo(BigDecimal.valueOf(100)) <= 0 &&
-                volume.compareTo(BigDecimal.valueOf(100_000)) > 0 ) {
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(0.0)) >= 0 &&
+                priceChangePercent.compareTo(BigDecimal.valueOf(10.5)) <= 0 &&
+                volume.compareTo(BigDecimal.valueOf(100_000)) > 0) {
 
             // Формируем сообщение для бота
             String direction = "Pump";
@@ -196,15 +233,19 @@ public class WebSocketClient {
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
             // Формируем сообщение для бота
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n RSI: %s\n Williams R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Объем: %s\uD83E\uDD11\n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent,  rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, formattedVolume, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\n MACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
+
+            // Обновляем время последнего уведомления
+            lastNotificationTime.put(symbol, currentTime);
         }
 
         // Добавьте обработку "dump"
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(-0.01)) <= 0 && // Условие изменения цены
-                volume.compareTo(BigDecimal.valueOf(100_000)) > 0) { // Минимальный объем для сигнализации о "dump"
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(-0.0)) >= 0 &&
+                priceChangePercent.compareTo(BigDecimal.valueOf(-1.5)) <= 0 )
+                /*volume.compareTo(BigDecimal.valueOf(0_000_000)) > 0) */ { // Минимальный объем для сигнализации о "dump"
 
             // Формируем сообщение для бота о "dump"
             String direction = "Dump";
@@ -212,10 +253,14 @@ public class WebSocketClient {
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
             // Формируем сообщение для бота
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n RSI: %s\n Williams R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Объем: %s\uD83E\uDD11\n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent,  rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, formattedVolume, tradingUrl);
+            // Формируем сообщение для бота
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\n MACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
+
+            // Обновляем время последнего уведомления
+            lastNotificationTime.put(symbol, currentTime);
         }
     }
 }
