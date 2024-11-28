@@ -48,7 +48,7 @@ public class WebSocketClient {
     private void connect() {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         try {
-            List<String> symbolsToTrack = List.of("BTCUSDT", "THEUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
+            List<String> symbolsToTrack = List.of("BTCUSDT", "THEUSDT","SCRTUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
                     "ETHUSDT", "BNBUSDT", "PENDLEUSDT", "AVAXUSDT", "AAVEUSDT", "WIFUSDT", "XRPUSDT", "TURBOUSDT",
                     "LINKUSDT", "SAGAUSDT", "DOGSUSDT", "OPUSDT", "PIXELUSDT", "JASMYUSDT", "ZKUSDT", "ARBUSDT",
                     "CATIUSDT", "FILUSDT", "DOTUSDT", "BCHUSDT", "EOSUSDT", "LTCUSDT", "TRXUSDT", "ETCUSDT", "XLMUSDT", "XMRUSDT",
@@ -223,36 +223,13 @@ public class WebSocketClient {
         lastPriceChanges.put(symbol + "_lastVolume", volume);
 
         // Проверяем условия для отправки уведомления
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(0.0)) >= 0 &&
-                priceChangePercent.compareTo(BigDecimal.valueOf(10.5)) <= 0 &&
-                volume.compareTo(BigDecimal.valueOf(100_000)) > 0) {
+        if (pumpProbability.compareTo(BigDecimal.valueOf(70)) > 0) {
 
             // Формируем сообщение для бота
             String direction = "Pump";
             String emoji = "\uD83D\uDCC8"; // Зеленая стрелка вверх
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
-            // Формируем сообщение для бота
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\n MACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
-
-            botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
-
-            // Обновляем время последнего уведомления
-            lastNotificationTime.put(symbol, currentTime);
-        }
-
-        // Добавьте обработку "dump"
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(-0.0)) >= 0 &&
-                priceChangePercent.compareTo(BigDecimal.valueOf(-1.5)) <= 0 )
-                /*volume.compareTo(BigDecimal.valueOf(0_000_000)) > 0) */ { // Минимальный объем для сигнализации о "dump"
-
-            // Формируем сообщение для бота о "dump"
-            String direction = "Dump";
-            String emoji = "\uD83D\uDCA3"; // Красная стрелка вниз
-            String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
-
-            // Формируем сообщение для бота
             // Формируем сообщение для бота
             String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\n MACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
                     symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
