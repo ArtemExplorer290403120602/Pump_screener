@@ -195,7 +195,6 @@ public class WebSocketClient {
         BigDecimal lowerBand = bollingerBands.getLowerBand();
 
         // Расчет вероятности "пампинга"
-        // Расчет вероятности "пампинга"
         BigDecimal pumpProbability = binanceService.calculatePumpProbability(
                 priceChangePercent,
                 rsi,
@@ -206,6 +205,9 @@ public class WebSocketClient {
                 williamsR,
                 upperBand,
                 lowerBand,
+                adx, // Передаем ADX
+                mfi, // Передаем MFI
+                adLine, // Передаем AD Line
                 symbol // Передаем символ
         );
 
@@ -230,7 +232,7 @@ public class WebSocketClient {
         lastPriceChanges.put(symbol + "_lastVolume", volume);
 
         // Проверяем условия для отправки уведомления
-        if (pumpProbability.compareTo(BigDecimal.valueOf(0)) > 0 && stochasticK.compareTo(BigDecimal.valueOf(0)) > 0) {
+        if (pumpProbability.compareTo(BigDecimal.valueOf(80)) > 0 && stochasticK.compareTo(BigDecimal.valueOf(88)) > 0) {
 
             // Формируем сообщение для бота
             String direction = "Pump";

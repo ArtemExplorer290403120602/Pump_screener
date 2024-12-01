@@ -284,22 +284,27 @@ public class BinanceService {
     // Метод для расчета вероятности "пампинга"
     public BigDecimal calculatePumpProbability(BigDecimal priceChangePercent, BigDecimal rsi, BigDecimal macd,
                                                BigDecimal sma, BigDecimal stochasticK, BigDecimal stochasticD,
-                                               BigDecimal williamsR, BigDecimal upperBand, BigDecimal lowerBand, String symbol) {
+                                               BigDecimal williamsR, BigDecimal upperBand, BigDecimal lowerBand,
+                                               BigDecimal adx, BigDecimal mfi, BigDecimal adLine, String symbol) {
         int score = 0;
-        int totalIndicators = 7; // Общее количество индикаторов
+        int totalIndicators = 10; // Общее количество индикаторов
 
         // Получаем текущую цену
         BigDecimal currentPrice = getCurrentPrice(symbol);
 
         // Условия для каждого индикатора
-        if (priceChangePercent.compareTo(BigDecimal.valueOf(2.5)) > 0) score++; // Изменение цены > 2.5%
-        if (rsi.compareTo(BigDecimal.valueOf(30)) < 0) score++; // RSI < 30
-        if (macd.compareTo(BigDecimal.ZERO) > 0) score++; // MACD > 0
-        if (sma != null && currentPrice.compareTo(sma) > 0) score++; // Текущая цена > SMA
-        if (williamsR.compareTo(BigDecimal.valueOf(-20)) > 0) score++; // Williams R > -20
-        if (stochasticK.compareTo(BigDecimal.valueOf(20)) < 0 && stochasticD.compareTo(BigDecimal.valueOf(20)) < 0)
-            score++; // K и D < 20
-        if (currentPrice.compareTo(upperBand) > 0) score++; // Текущая цена > верхней границы Боллинджера
+        if (priceChangePercent.compareTo(BigDecimal.valueOf(2.5)) > 0) score++;
+        if (rsi.compareTo(BigDecimal.valueOf(30)) < 0) score++;
+        if (macd.compareTo(BigDecimal.ZERO) > 0) score++;
+        if (sma != null && currentPrice.compareTo(sma) > 0) score++;
+        if (williamsR.compareTo(BigDecimal.valueOf(-20)) > 0) score++;
+        if (stochasticK.compareTo(BigDecimal.valueOf(20)) < 0 && stochasticD.compareTo(BigDecimal.valueOf(20)) < 0) score++;
+        if (currentPrice.compareTo(upperBand) > 0) score++;
+
+        // Условия для новых индикаторов
+        if (adx.compareTo(BigDecimal.valueOf(50)) >= 0 && adx.compareTo(BigDecimal.valueOf(75)) <= 0) score++; // ADX от 50 до 75
+        if (mfi.compareTo(BigDecimal.valueOf(20)) < 0) score++; // MFI < 20
+        if (adLine.compareTo(BigDecimal.ZERO) > 0) score++; // AD Line положительное
 
         // Вычисление вероятности
         return BigDecimal.valueOf((double) score / totalIndicators * 100).setScale(2, RoundingMode.HALF_UP);
