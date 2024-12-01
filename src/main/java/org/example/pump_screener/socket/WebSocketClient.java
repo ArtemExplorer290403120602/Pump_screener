@@ -48,7 +48,7 @@ public class WebSocketClient {
     private void connect() {
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
         try {
-            List<String> symbolsToTrack = List.of("BTCUSDT", "THEUSDT","SCRTUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
+            List<String> symbolsToTrack = List.of("BTCUSDT", "THEUSDT", "SCRTUSDT", "DOGEUSDT", "TROYUSDT", "WLDUSDT", "SUIUSDT", "TIAUSDT", "ADAUSDT",
                     "ETHUSDT", "BNBUSDT", "PENDLEUSDT", "AVAXUSDT", "AAVEUSDT", "WIFUSDT", "XRPUSDT", "TURBOUSDT",
                     "LINKUSDT", "SAGAUSDT", "DOGSUSDT", "OPUSDT", "PIXELUSDT", "JASMYUSDT", "ZKUSDT", "ARBUSDT",
                     "CATIUSDT", "FILUSDT", "DOTUSDT", "BCHUSDT", "EOSUSDT", "LTCUSDT", "TRXUSDT", "ETCUSDT", "XLMUSDT", "XMRUSDT",
@@ -223,7 +223,7 @@ public class WebSocketClient {
         lastPriceChanges.put(symbol + "_lastVolume", volume);
 
         // Проверяем условия для отправки уведомления
-        if (pumpProbability.compareTo(BigDecimal.valueOf(70)) > 0) {
+        if (pumpProbability.compareTo(BigDecimal.valueOf(70)) > 0 && stochasticK.compareTo(BigDecimal.valueOf(88)) > 0) {
 
             // Формируем сообщение для бота
             String direction = "Pump";
