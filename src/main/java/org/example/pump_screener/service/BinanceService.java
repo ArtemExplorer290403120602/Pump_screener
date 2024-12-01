@@ -361,47 +361,94 @@ public class BinanceService {
         return ema;
     }
 
+    public BigDecimal calculateADLine(String symbol) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+        BigDecimal adLine = BigDecimal.ZERO;
+
+        for (Candlestick candlestick : candlesticks) {
+            BigDecimal adValue = calculateADValue(candlestick);
+            adLine = adLine.add(adValue);
+        }
+
+        return adLine; // Возвращаем итоговое значение A/D Line
+    }
+
+    private BigDecimal calculateADValue(Candlestick candlestick) {
+        BigDecimal close = new BigDecimal(candlestick.getClose());
+        BigDecimal high = new BigDecimal(candlestick.getHigh());
+        BigDecimal low = new BigDecimal(candlestick.getLow());
+        BigDecimal volume = new BigDecimal(candlestick.getVolume());
+
+        // Проверка на случай, если high равно low
+        if (high.compareTo(low) == 0) {
+            return BigDecimal.ZERO; // Избегаем деления на ноль
+        }
+
+        // Расчет A/D значения для текущей свечи
+        return ((close.subtract(low).subtract(high.subtract(close)))
+                .divide(high.subtract(low), 4, RoundingMode.HALF_UP))
+                .multiply(volume);
+    }
+
     public BigDecimal calculateADX(String symbol, int period) {
         List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
-
         if (candlesticks.size() < period) {
             throw new IllegalArgumentException("Недостаточно данных для расчета ADX.");
         }
 
-        BigDecimal[] plusDM = new BigDecimal[candlesticks.size()];
-        BigDecimal[] minusDM = new BigDecimal[candlesticks.size()];
-        BigDecimal[] tr = new BigDecimal[candlesticks.size()];
+        List<BigDecimal> plusDM = new ArrayList<>();
+        List<BigDecimal> minusDM = new ArrayList<>();
+        List<BigDecimal> tr = new ArrayList<>();
 
         for (int i = 1; i < candlesticks.size(); i++) {
-            BigDecimal highDiff = new BigDecimal(candlesticks.get(i).getHigh()).subtract(new BigDecimal(candlesticks.get(i - 1).getHigh()));
-            BigDecimal lowDiff = new BigDecimal(candlesticks.get(i - 1).getLow()).subtract(new BigDecimal(candlesticks.get(i).getLow()));
-
-            plusDM[i] = (highDiff.compareTo(lowDiff) > 0 && highDiff.compareTo(BigDecimal.ZERO) > 0) ? highDiff : BigDecimal.ZERO;
-            minusDM[i] = (lowDiff.compareTo(highDiff) > 0 && lowDiff.compareTo(BigDecimal.ZERO) > 0) ? lowDiff : BigDecimal.ZERO;
-
-            tr[i] = new BigDecimal(candlesticks.get(i).getHigh()).subtract(new BigDecimal(candlesticks.get(i).getLow()));
+            plusDM.add(calculatePlusDM(candlesticks, i));
+            minusDM.add(calculateMinusDM(candlesticks, i));
+            tr.add(calculateTrueRange(candlesticks, i));
         }
 
-        // Вычисление сглаженных значений
-        BigDecimal smoothedPlusDM = calculateSMA1(Arrays.asList(plusDM).subList(1, period + 1), period);
-        BigDecimal smoothedMinusDM = calculateSMA1(Arrays.asList(minusDM).subList(1, period + 1), period);
-        BigDecimal smoothedTR = calculateSMA1(Arrays.asList(tr).subList(1, period + 1), period);
+        BigDecimal smoothedPlusDM = calculateSMA1(plusDM, period);
+        BigDecimal smoothedMinusDM = calculateSMA1(minusDM, period);
+        BigDecimal smoothedTR = calculateSMA1(tr, period);
 
-        BigDecimal diPlus = smoothedPlusDM.divide(smoothedTR, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-        BigDecimal diMinus = smoothedMinusDM.divide(smoothedTR, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        BigDecimal diPlus = calculateDI(smoothedPlusDM, smoothedTR);
+        BigDecimal diMinus = calculateDI(smoothedMinusDM, smoothedTR);
 
-        BigDecimal adx = diPlus.subtract(diMinus).abs(); // ADX - это абсолютная разница между DI+ и DI-
-
-        return adx;
+        return calculateADXValue(diPlus, diMinus);
     }
 
-    // Вспомогательный метод для расчета SMA
+    private BigDecimal calculatePlusDM(List<Candlestick> candlesticks, int i) {
+        BigDecimal highDiff = new BigDecimal(candlesticks.get(i).getHigh()).subtract(new BigDecimal(candlesticks.get(i - 1).getHigh()));
+        return (highDiff.compareTo(BigDecimal.ZERO) > 0) ? highDiff : BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateMinusDM(List<Candlestick> candlesticks, int i) {
+        BigDecimal lowDiff = new BigDecimal(candlesticks.get(i - 1).getLow()).subtract(new BigDecimal(candlesticks.get(i).getLow()));
+        return (lowDiff.compareTo(BigDecimal.ZERO) > 0) ? lowDiff : BigDecimal.ZERO;
+    }
+
+    private BigDecimal calculateTrueRange(List<Candlestick> candlesticks, int i) {
+        BigDecimal high = new BigDecimal(candlesticks.get(i).getHigh());
+        BigDecimal low = new BigDecimal(candlesticks.get(i).getLow());
+        return high.subtract(low);
+    }
+
     private BigDecimal calculateSMA1(List<BigDecimal> values, int period) {
         if (values.size() < period) {
-            return BigDecimal.ZERO; // Недостаточно данных
+            throw new IllegalArgumentException("Недостаточно данных для расчета SMA.");
         }
         BigDecimal total = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.divide(BigDecimal.valueOf(period), 4, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateDI(BigDecimal smoothedDM, BigDecimal smoothedTR) {
+        if (smoothedTR.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        return smoothedDM.divide(smoothedTR, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+    }
+
+    private BigDecimal calculateADXValue(BigDecimal diPlus, BigDecimal diMinus) {
+        return diPlus.subtract(diMinus).abs(); // ADX
     }
 
     public BigDecimal calculateMFI(String symbol, int periods) {
@@ -411,23 +458,13 @@ public class BinanceService {
             throw new IllegalArgumentException("Недостаточно данных для расчета MFI. Требуется " + periods + " свечей, но получено " + candlesticks.size() + ".");
         }
 
-        BigDecimal typicalPriceSum = BigDecimal.ZERO;
         BigDecimal moneyFlowPositive = BigDecimal.ZERO;
         BigDecimal moneyFlowNegative = BigDecimal.ZERO;
 
         for (int i = 0; i < periods; i++) {
-            Candlestick candle = candlesticks.get(i);
-            BigDecimal typicalPrice = (new BigDecimal(candle.getHigh())
-                    .add(new BigDecimal(candle.getLow())
-                            .add(new BigDecimal(candle.getClose()))).divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
-
-            typicalPriceSum = typicalPriceSum.add(typicalPrice);
-
+            BigDecimal typicalPrice = calculateTypicalPrice(candlesticks.get(i));
             if (i > 0) {
-                BigDecimal previousTypicalPrice = (new BigDecimal(candlesticks.get(i - 1).getHigh())
-                        .add(new BigDecimal(candlesticks.get(i - 1).getLow())
-                                .add(new BigDecimal(candlesticks.get(i - 1).getClose()))).divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
-
+                BigDecimal previousTypicalPrice = calculateTypicalPrice(candlesticks.get(i - 1));
                 if (typicalPrice.compareTo(previousTypicalPrice) > 0) {
                     moneyFlowPositive = moneyFlowPositive.add(typicalPrice);
                 } else {
@@ -440,7 +477,13 @@ public class BinanceService {
             return BigDecimal.ZERO; // Избегаем деления на ноль
         }
 
-        BigDecimal mfi = moneyFlowPositive.divide(moneyFlowPositive.add(moneyFlowNegative), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-        return mfi;
+        return moneyFlowPositive.divide(moneyFlowPositive.add(moneyFlowNegative), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+    }
+
+    private BigDecimal calculateTypicalPrice(Candlestick candle) {
+        return (new BigDecimal(candle.getHigh())
+                .add(new BigDecimal(candle.getLow())
+                        .add(new BigDecimal(candle.getClose())))
+                .divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
     }
 }

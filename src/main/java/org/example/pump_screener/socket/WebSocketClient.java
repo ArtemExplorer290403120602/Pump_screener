@@ -182,6 +182,8 @@ public class WebSocketClient {
 
         BigDecimal mfi = binanceService.calculateMFI(symbol, 14); // Расчет MFI
 
+        BigDecimal adLine = binanceService.calculateADLine(symbol);
+
         // Получение значений %K и %D
         BigDecimal stochasticK = stochasticValues[0];
         BigDecimal stochasticD = stochasticValues[1];
@@ -236,8 +238,8 @@ public class WebSocketClient {
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
             // Формируем сообщение для бота
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\nADX: %.2f\nMACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n MFI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), adx.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, mfiString, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\n ADX: %.2f\n MACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n MFI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n AD Line: %.2f\n [Торгуй сейчас!](%s)✅",
+            symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), adx.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, mfiString, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, adLine.setScale(2, RoundingMode.HALF_UP), tradingUrl);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
 
