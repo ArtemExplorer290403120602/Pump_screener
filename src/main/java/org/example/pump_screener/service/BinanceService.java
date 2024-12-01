@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -357,5 +358,48 @@ public class BinanceService {
         }
 
         return ema;
+    }
+
+    public BigDecimal calculateADX(String symbol, int period) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+
+        if (candlesticks.size() < period) {
+            throw new IllegalArgumentException("Недостаточно данных для расчета ADX.");
+        }
+
+        BigDecimal[] plusDM = new BigDecimal[candlesticks.size()];
+        BigDecimal[] minusDM = new BigDecimal[candlesticks.size()];
+        BigDecimal[] tr = new BigDecimal[candlesticks.size()];
+
+        for (int i = 1; i < candlesticks.size(); i++) {
+            BigDecimal highDiff = new BigDecimal(candlesticks.get(i).getHigh()).subtract(new BigDecimal(candlesticks.get(i - 1).getHigh()));
+            BigDecimal lowDiff = new BigDecimal(candlesticks.get(i - 1).getLow()).subtract(new BigDecimal(candlesticks.get(i).getLow()));
+
+            plusDM[i] = (highDiff.compareTo(lowDiff) > 0 && highDiff.compareTo(BigDecimal.ZERO) > 0) ? highDiff : BigDecimal.ZERO;
+            minusDM[i] = (lowDiff.compareTo(highDiff) > 0 && lowDiff.compareTo(BigDecimal.ZERO) > 0) ? lowDiff : BigDecimal.ZERO;
+
+            tr[i] = new BigDecimal(candlesticks.get(i).getHigh()).subtract(new BigDecimal(candlesticks.get(i).getLow()));
+        }
+
+        // Вычисление сглаженных значений
+        BigDecimal smoothedPlusDM = calculateSMA1(Arrays.asList(plusDM).subList(1, period + 1), period);
+        BigDecimal smoothedMinusDM = calculateSMA1(Arrays.asList(minusDM).subList(1, period + 1), period);
+        BigDecimal smoothedTR = calculateSMA1(Arrays.asList(tr).subList(1, period + 1), period);
+
+        BigDecimal diPlus = smoothedPlusDM.divide(smoothedTR, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        BigDecimal diMinus = smoothedMinusDM.divide(smoothedTR, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+
+        BigDecimal adx = diPlus.subtract(diMinus).abs(); // ADX - это абсолютная разница между DI+ и DI-
+
+        return adx;
+    }
+
+    // Вспомогательный метод для расчета SMA
+    private BigDecimal calculateSMA1(List<BigDecimal> values, int period) {
+        if (values.size() < period) {
+            return BigDecimal.ZERO; // Недостаточно данных
+        }
+        BigDecimal total = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(period), 4, RoundingMode.HALF_UP);
     }
 }
