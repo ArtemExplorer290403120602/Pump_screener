@@ -180,6 +180,8 @@ public class WebSocketClient {
 
         BigDecimal adx = binanceService.calculateADX(symbol, 14); // Используем 14 периодов для ADX
 
+        BigDecimal mfi = binanceService.calculateMFI(symbol, 14); // Расчет MFI
+
         // Получение значений %K и %D
         BigDecimal stochasticK = stochasticValues[0];
         BigDecimal stochasticD = stochasticValues[1];
@@ -214,6 +216,7 @@ public class WebSocketClient {
         String smaString = sma != null ? sma.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String upperBandString = upperBand != null ? upperBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
         String lowerBandString = lowerBand != null ? lowerBand.setScale(2, RoundingMode.HALF_UP).toString() : "N/A";
+        String mfiString = mfi != null ? mfi.setScale(2, RoundingMode.HALF_UP).toString() : "N/A"; // Форматирование MFI
 
         // Форматирование MACD для отправки
         String macdString = macd.getMacd().setScale(2, RoundingMode.HALF_UP).toString();
@@ -233,8 +236,8 @@ public class WebSocketClient {
             String tradingUrl = String.format("https://www.binance.com/en/trade/%s?ref=396823681", symbol);
 
             // Формируем сообщение для бота
-            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\nADX: %.2f\nMACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
-                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), adx.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
+            String message = String.format("❗️❗️❗️❗️❗️`%s` %s\n\n %s изменение цены: %.2f%% 🔥\n Текущая цена: %s\nADX: %.2f\nMACD: %s\n Signal: %s \n Histogram: %s \n RSI: %s\n MFI: %s\n Williams (Индикатор моментума) R: %s\n Стохастик K: %s\n D: %s\n SMA: %s\n Боллинджер (верхняя граница): %s\n Боллинджер (нижняя граница): %s\n Вероятность пампинга: %.2f%%\n Объем: %s\uD83E\uDD11 \n[Торгуй сейчас!](%s)✅",
+                    symbol, direction, emoji, priceChangePercent, currentPrice.setScale(2, RoundingMode.HALF_UP), adx.setScale(2, RoundingMode.HALF_UP), macdString, signalString, histogramString, rsi, mfiString, williamsRString, stochasticKString, stochasticDString, smaString, upperBandString, lowerBandString, pumpProbability, formattedVolume, tradingUrl);
 
             botService.sendMessageToAllUsers(message, symbol, latestCandlesticks); // Отправляем сообщение в бот
 

@@ -297,7 +297,8 @@ public class BinanceService {
         if (macd.compareTo(BigDecimal.ZERO) > 0) score++; // MACD > 0
         if (sma != null && currentPrice.compareTo(sma) > 0) score++; // Текущая цена > SMA
         if (williamsR.compareTo(BigDecimal.valueOf(-20)) > 0) score++; // Williams R > -20
-        if (stochasticK.compareTo(BigDecimal.valueOf(20)) < 0 && stochasticD.compareTo(BigDecimal.valueOf(20)) < 0) score++; // K и D < 20
+        if (stochasticK.compareTo(BigDecimal.valueOf(20)) < 0 && stochasticD.compareTo(BigDecimal.valueOf(20)) < 0)
+            score++; // K и D < 20
         if (currentPrice.compareTo(upperBand) > 0) score++; // Текущая цена > верхней границы Боллинджера
 
         // Вычисление вероятности
@@ -401,5 +402,45 @@ public class BinanceService {
         }
         BigDecimal total = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
         return total.divide(BigDecimal.valueOf(period), 4, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateMFI(String symbol, int periods) {
+        List<Candlestick> candlesticks = getLatestCandlesticks(symbol);
+
+        if (candlesticks.size() < periods) {
+            throw new IllegalArgumentException("Недостаточно данных для расчета MFI. Требуется " + periods + " свечей, но получено " + candlesticks.size() + ".");
+        }
+
+        BigDecimal typicalPriceSum = BigDecimal.ZERO;
+        BigDecimal moneyFlowPositive = BigDecimal.ZERO;
+        BigDecimal moneyFlowNegative = BigDecimal.ZERO;
+
+        for (int i = 0; i < periods; i++) {
+            Candlestick candle = candlesticks.get(i);
+            BigDecimal typicalPrice = (new BigDecimal(candle.getHigh())
+                    .add(new BigDecimal(candle.getLow())
+                            .add(new BigDecimal(candle.getClose()))).divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
+
+            typicalPriceSum = typicalPriceSum.add(typicalPrice);
+
+            if (i > 0) {
+                BigDecimal previousTypicalPrice = (new BigDecimal(candlesticks.get(i - 1).getHigh())
+                        .add(new BigDecimal(candlesticks.get(i - 1).getLow())
+                                .add(new BigDecimal(candlesticks.get(i - 1).getClose()))).divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
+
+                if (typicalPrice.compareTo(previousTypicalPrice) > 0) {
+                    moneyFlowPositive = moneyFlowPositive.add(typicalPrice);
+                } else {
+                    moneyFlowNegative = moneyFlowNegative.add(typicalPrice);
+                }
+            }
+        }
+
+        if (moneyFlowPositive.add(moneyFlowNegative).compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO; // Избегаем деления на ноль
+        }
+
+        BigDecimal mfi = moneyFlowPositive.divide(moneyFlowPositive.add(moneyFlowNegative), 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        return mfi;
     }
 }
